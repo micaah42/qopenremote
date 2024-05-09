@@ -10,8 +10,8 @@ QObjectRegistry::QObjectRegistry(QObject *parent)
     : QObject{parent}
 {
     // we need a the notifier slot meta method for our connect signatures
-    _notifierSlotIdx = this->metaObject()->indexOfMethod("onNotifySignal()");
-    _notifierSlot = this->metaObject()->method(_notifierSlotIdx);
+    _notifierSlotIdx = QObjectRegistry::metaObject()->indexOfMethod("onNotifySignal()");
+    _notifierSlot = QObjectRegistry::metaObject()->method(_notifierSlotIdx);
 }
 
 void QObjectRegistry::registerObject(const QString &name, QObject *object)
