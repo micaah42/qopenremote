@@ -16,10 +16,13 @@ QObjectRegistry::QObjectRegistry(QObject *parent)
 
 void QObjectRegistry::registerObject(const QString &name, QObject *object)
 {
+    _objects.insert(name, object);
+
+    if (object == nullptr)
+        return;
+
     auto metaObject = object->metaObject();
     qCInfo(self) << this << "register" << metaObject->className() << name;
-
-    _objects.insert(name, object);
 
     // register properties
 

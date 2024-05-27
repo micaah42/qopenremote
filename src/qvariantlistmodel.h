@@ -10,16 +10,15 @@ class QVariantListModel : public QAbstractListModel
 public:
     explicit QVariantListModel(QObject *parent = nullptr);
 
-    // qlist like interface for c++
+    /* qlist like interface for c++ */
 
     const QVariant &at(int i) const;
     const QVariant &operator[](int i) const;
-    QVariant &operator[](int i);
 
     void reserve(int size);
     void clear();
 
-    void append(const QList<QVariant> &variant);
+    void append(const QList<QVariant> &variants);
     void append(const QVariant &variant);
     void prepend(const QVariant &variant);
 
@@ -42,9 +41,9 @@ public:
     int indexOf(const QVariant &variant, int from = 0) const;
     int count(const QVariant &variant) const;
 
-    int size() const;
+    int size() const { return _list.size(); };
 
-    // model interface for qml list views
+    /* model interface for qml list views */
 
     virtual QHash<int, QByteArray> roleNames() const override;
     Qt::ItemFlags flags(const QModelIndex &index) const override;
@@ -56,7 +55,11 @@ public:
     bool insertRows(int row, int count, const QModelIndex &parent = QModelIndex()) override;
     bool removeRows(int row, int count, const QModelIndex &parent = QModelIndex()) override;
 
+    bool moveRows(const QModelIndex &sourceParent, int sourceRow, int count, const QModelIndex &destinationParent, int destinationChild) override;
+    void sort(int column, Qt::SortOrder order) override;
+
 private:
+    std::function<bool(const QVariant &, const QVariant &)> _compFn;
     QVariantList _list;
 };
 

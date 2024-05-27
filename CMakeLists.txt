@@ -15,9 +15,15 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core)
 
 add_library(${PROJECT_NAME} SHARED
     src/qtility_global.h
+
     src/bijectivemap.h
+
     src/qvariantlistmodel.cpp
     src/qvariantlistmodel.h
+
+    src/qlistmodel.cpp
+    src/qlistmodel.h
+
     src/remote.cpp
     src/remote.h
 )
@@ -26,8 +32,8 @@ add_library(${PROJECT_NAME} SHARED
 set_target_properties(${PROJECT_NAME} PROPERTIES SOVERSION ${PROJECT_VERSION})
 
 target_include_directories(${PROJECT_NAME} PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/>
-    $<INSTALL_INTERFACE:src/>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
+    $<INSTALL_INTERFACE:src>
 )
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
