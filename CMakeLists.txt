@@ -14,14 +14,12 @@ find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core)
 
 add_library(${PROJECT_NAME} SHARED
-    src/qtility_global.h
-    src/bijectivemap.h
+    src/qopenremote_global.h
     src/qvariantlistmodel.cpp
     src/qvariantlistmodel.h
-    src/remote.cpp
-    src/remote.h
+    src/qobjectregistry.cpp
+    src/qobjectregistry.h
 )
-
 
 set_target_properties(${PROJECT_NAME} PROPERTIES SOVERSION ${PROJECT_VERSION})
 
@@ -39,7 +37,14 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 )
 
 include(GNUInstallDirs)
+
 install(TARGETS ${PROJECT_NAME}
     BUNDLE DESTINATION .
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
+
+include(CTest)
+
+if (BUILD_TESTING)
+    add_subdirectory(tests)
+endif()

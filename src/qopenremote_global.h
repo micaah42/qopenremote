@@ -1,5 +1,5 @@
-#ifndef QTILITY_GLOBAL_H
-#define QTILITY_GLOBAL_H
+#ifndef QOPENREMOTE_GLOBAL_H
+#define QOPENREMOTE_GLOBAL_H
 
 #include <QtCore/qglobal.h>
 
