@@ -23,6 +23,7 @@ public slots:
     QVariant get(const QString &key);
 
 signals:
+    void signalEmitted(const QString &key, const QVariantList &args); // todo
     void valueChanged(const QString &key, const QVariant &value);
 
 private slots:
@@ -31,12 +32,10 @@ private slots:
     void onNotifySignal();
 
 private:
-    QMap<QString, QPair<QObject *, QMetaProperty>> _properties;
     QMap<QString, QPair<QObject *, QMetaMethod>> _methods;
+    QMap<QString, QPair<QObject *, QMetaProperty>> _properties;
 
-    //QMap<QString, std::function<QVariant()>> _read;
     QMap<QPair<QObject *, int>, std::function<void()>> _notify;
-    //QMap<QString, std::function<void(const QVariant &value)>> _write;
     QMap<QString, std::function<QVariant(const QVariantList &)>> _call;
 
     int _notifierSlotIdx;

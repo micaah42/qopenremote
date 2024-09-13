@@ -1,141 +1,84 @@
 #ifndef QLISTMODEL_H
 #define QLISTMODEL_H
 
-#include <qvariantlistmodel.h>
+#include <QAbstractListModel>
 
-template<class T>
-QVariantList qToVariantList(const QList<T> list)
+class QListModelBase : public QAbstractListModel
 {
-    QVariantList variants;
-    for (auto const &v : qAsConst(list))
-        variants.append(QVariant::fromValue(v));
+    Q_OBJECT
 
-    return variants;
-}
+public:
+    explicit QListModelBase(QObject *parent = nullptr);
+
+    // handling for qml viewmodel
+
+    int rowCount(const QModelIndex &parent = QModelIndex()) const override;
+    QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override;
+    bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
+    Qt::ItemFlags flags(const QModelIndex &index) const override;
+
+    bool insertRows(int row, int count, const QModelIndex &parent = QModelIndex()) override;
+    bool removeRows(int row, int count, const QModelIndex &parent = QModelIndex()) override;
+
+public slots:
+
+    // variant based core list functions
+
+    virtual bool hasTypeOf(const QVariant &variant) const = 0;
+    virtual QVariant newVariant() const = 0;
+    virtual const QVariant &at(int i) const = 0;
+    virtual void set(int i, const QVariant &variant) = 0;
+    virtual void insert(int i, const QVariant &variant) = 0;
+    virtual void remove(int i) = 0;
+    virtual int size() const = 0;
+
+    // convenience
+
+    void append(const QVariant &variant) { insert(size(), variant); };
+    void prepend(const QVariant &variant) { insert(0, variant); };
+};
 
 template<class T>
-const QList<T> qFromVariantList(QVariantList variants)
-{
-    QList<T> list;
-    for (auto const &v : qAsConst(variants))
-        list.append(v.value<T>());
-
-    return list;
-}
-
-template<class T>
-class QListModel : public QVariantListModel
+class QListModel : public QListModelBase
 {
 public:
     explicit QListModel(QObject *parent = nullptr);
 
-    // qlist like interface for c++
+    virtual bool hasTypeOf(const QVariant &variant) const { return variant.canConvert<T>(); };
 
-    const T &at(int i) const;
-    const T &operator[](int i) const;
+    virtual QVariant newVariant() const override { return QVariant::fromValue(this->newT()); };
+    T newT() const { return T(); };
 
-    void append(const QList<T> &variants);
-    void append(const T &variant);
-    void prepend(const T &variant);
+    virtual const QVariant &at(int i) const override { return QVariant::fromValue(_ts[i]); };
 
-    void replace(int i, const T &variant);
-    void insert(int i, const T &variant);
+    const T &operator[](int i) const { return _ts[i]; };
+    T &operator[](int i) { return _ts[i]; };
 
-    void removeAt(int i);
-    bool removeOne(const T &variant);
-    int removeAll(const T &variant);
+    virtual void set(int i, const QVariant &variant) override
+    {
+        Q_ASSERT(hasTypeOf(variant));
+        _ts[i] = variant.value<T>();
+    };
 
-    T takeAt(int i);
-    T takeFirst();
-    T takeLast();
+    virtual void insert(int i, const QVariant &variant) override
+    {
+        Q_ASSERT(hasTypeOf(variant));
 
-    // bool contains(const T &variant) const;
-    // int lastIndexOf(const T &variant, int from = -1) const;
-    // int indexOf(const T &variant, int from = 0) const;
-    // int count(const T &variant) const;
+        beginInsertRows(QModelIndex(), i, i);
+        _ts.insert(i, variant.value<T>());
+        endInsertRows();
+    };
+
+    virtual void remove(int i) override
+    {
+        beginRemoveRows(QModelIndex(), i, i);
+        _ts.remove(i);
+        endRemoveRows();
+    };
+    virtual int size() const override { return _ts.size(); };
+
+private:
+    QList<T> _ts;
 };
-
-template<class T>
-QListModel<T>::QListModel(QObject *parent)
-    : QVariantListModel{parent}
-{}
-
-template<class T>
-const T &QListModel<T>::at(int i) const
-{
-    return *reinterpret_cast<const T *>(QVariantListModel::at(i).constData());
-}
-
-template<class T>
-const T &QListModel<T>::operator[](int i) const
-{
-    return *reinterpret_cast<const T *>(QVariantListModel::at(i).constData());
-}
-
-template<class T>
-void QListModel<T>::append(const QList<T> &variants)
-{
-    QVariantListModel::append(qToVariantList(variants));
-}
-
-template<class T>
-void QListModel<T>::append(const T &variant)
-{
-    QVariantListModel::append(QVariant::fromValue(variant));
-}
-
-template<class T>
-void QListModel<T>::prepend(const T &variant)
-{
-    QVariantListModel::prepend(QVariant::fromValue(variant));
-}
-
-template<class T>
-void QListModel<T>::replace(int i, const T &variant)
-{
-    QVariantListModel::replace(i, QVariant::fromValue(variant));
-}
-
-template<class T>
-void QListModel<T>::insert(int i, const T &variant)
-{
-    QVariantListModel::insert(i, QVariant::fromValue(variant));
-}
-
-template<class T>
-int QListModel<T>::removeAll(const T &variant)
-{
-    return QVariantListModel::removeAll(QVariant::fromValue(variant));
-}
-
-template<class T>
-bool QListModel<T>::removeOne(const T &variant)
-{
-    return QVariantListModel::removeOne(QVariant::fromValue(variant));
-}
-
-template<class T>
-void QListModel<T>::removeAt(int i)
-{
-    QVariantListModel::removeAt(i);
-}
-
-template<class T>
-T QListModel<T>::takeAt(int i)
-{
-    QVariantListModel::takeAt(i);
-}
-
-template<class T>
-T QListModel<T>::takeFirst()
-{
-    return QVariantListModel::takeFirst();
-}
-
-template<class T>
-T QListModel<T>::takeLast()
-{
-    return QVariantListModel::takeLast();
-}
 
 #endif // QLISTMODEL_H

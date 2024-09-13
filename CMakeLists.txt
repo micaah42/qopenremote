@@ -16,12 +16,12 @@ find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core)
 add_library(${PROJECT_NAME} SHARED
     src/qopenremote_global.h
 
-    src/qvariantlistmodel.cpp
-    src/qvariantlistmodel.h
-    src/qlistmodel.cpp
-    src/qlistmodel.h
     src/qobjectregistry.cpp
     src/qobjectregistry.h
+    src/qopenremoteadapter.cpp
+    src/qopenremoteadapter.h
+    src/qlistmodel.cpp
+    src/qlistmodel.h
 )
 
 
