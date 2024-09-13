@@ -5,7 +5,7 @@
 #include <QLoggingCategory>
 
 namespace {
-Q_LOGGING_CATEGORY(self, "registry")
+Q_LOGGING_CATEGORY(self, "registry", QtWarningMsg)
 }
 
 QObjectRegistry::QObjectRegistry(QObject *parent)
