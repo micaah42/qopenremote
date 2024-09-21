@@ -1,23 +1,26 @@
 #include "qlistmodel.h"
 
-QListModelBase::QListModelBase(QObject *parent)
-    : QAbstractListModel(parent)
-{}
-
-int QListModelBase::rowCount(const QModelIndex &parent) const
+QVariant QListModelBase::takeAtX(int i)
 {
-    return size();
+    auto temp = this->atX(i);
+    this->removeAt(i);
+    return temp;
 }
 
-QVariant QListModelBase::data(const QModelIndex &index, int role) const
+QVariant QListModelBase::takeFirstX()
 {
-    return at(index.row());
+    return this->takeAtX(0);
 }
 
-bool QListModelBase::setData(const QModelIndex &index, const QVariant &value, int role)
+QVariant QListModelBase::takeLastX()
 {
-    set(index.row(), value);
-    return true;
+    return this->takeAtX(this->size() - 1);
+}
+
+QHash<int, QByteArray> QListModelBase::roleNames() const
+{
+    static const QHash<int, QByteArray> roleNames{{Qt::UserRole + 1, "value"}};
+    return roleNames;
 }
 
 Qt::ItemFlags QListModelBase::flags(const QModelIndex &index) const
@@ -28,24 +31,13 @@ Qt::ItemFlags QListModelBase::flags(const QModelIndex &index) const
     return QAbstractItemModel::flags(index) | Qt::ItemIsEditable;
 }
 
-bool QListModelBase::insertRows(int row, int count, const QModelIndex &parent)
+int QListModelBase::rowCount(const QModelIndex &parent) const
 {
-    beginInsertRows(parent, row, row + count - 1);
-
-    for (int i = row; i < row + count; i++)
-        this->insert(i, this->newVariant());
-
-    endInsertRows();
-    return true;
+    return this->size();
 }
 
-bool QListModelBase::removeRows(int row, int count, const QModelIndex &parent)
+bool QListModelBase::setData(const QModelIndex &index, const QVariant &value, int role)
 {
-    beginRemoveRows(parent, row, row + count - 1);
-
-    for (int i = 0; i < count; i++)
-        this->remove(row);
-
-    endRemoveRows();
+    this->setX(index.row(), value);
     return true;
 }
