@@ -11,9 +11,9 @@ public:
     explicit QVariantListModel(QObject *parent = nullptr);
 
     /* qlist like interface for c++ */
+    const QVariant &operator[](int i) const;
 
     const QVariant &at(int i) const;
-    const QVariant &operator[](int i) const;
 
     void reserve(int size);
     void clear();

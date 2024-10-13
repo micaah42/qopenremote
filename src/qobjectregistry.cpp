@@ -22,7 +22,7 @@ void QObjectRegistry::registerObject(const QString &name, QObject *object)
         return;
 
     auto metaObject = object->metaObject();
-    qCInfo(self) << this << "register" << metaObject->className() << name;
+    qCInfo(self) << this << "register object" << metaObject->className() << name;
 
     // register properties
 
@@ -51,6 +51,8 @@ void QObjectRegistry::deregisterObject(const QString &name)
 
 void QObjectRegistry::deregisterObject(QObject *object)
 {
+    qCInfo(self) << "deregister object:" << object;
+
     auto it0 = std::remove_if(_properties.begin(), _properties.end(), [object](const QPair<QObject *, QMetaProperty> &v) { return object == v.first; });
     _properties.erase(it0, _properties.end());
 
@@ -107,11 +109,24 @@ void QObjectRegistry::onNotifySignal()
     (*notifyIt)();
 }
 
+const QMap<QString, QPair<QObject *, QMetaProperty> > &QObjectRegistry::properties() const
+{
+    return _properties;
+}
+
+const QMap<QString, QPair<QObject *, QMetaMethod> > &QObjectRegistry::methods() const
+{
+    return _methods;
+}
+
 void QObjectRegistry::registerProperty(const QString &propertyName, QObject *object, const QMetaProperty &property)
 {
-    qCDebug(self) << "register property:" << property.typeName() << propertyName;
+    qCInfo(self) << "register property:" << property.typeName() << propertyName;
 
     _properties[propertyName] = {object, property};
+
+    const auto propertyValue = property.read(object);
+    emit valueChanged(propertyName, propertyValue);
 
     if (!property.isReadable()) {
         qCCritical(self) << "cannot handle ungettable property";
@@ -121,7 +136,7 @@ void QObjectRegistry::registerProperty(const QString &propertyName, QObject *obj
     if (property.hasNotifySignal()) {
         _notify[{object, property.notifySignalIndex()}] = [this, propertyName, property, object]() {
             const auto propertyValue = property.read(object);
-            qCDebug(self) << "value changed" << propertyName << propertyValue;
+            qCDebug(self) << "object property changed" << propertyName << propertyValue;
             emit valueChanged(propertyName, propertyValue);
         };
 
@@ -166,8 +181,6 @@ void QObjectRegistry::registerProperty(const QString &propertyName, QObject *obj
     }
 
     // handle simple arrays
-
-    auto propertyValue = property.read(object);
 
     if (propertyValue.canConvert<QVariantList>() && propertyValue.typeId() != QMetaType::QString) {
         auto variantList = propertyValue.value<QVariantList>();

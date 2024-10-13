@@ -10,6 +10,7 @@ class QOpenRemoteAdapter : public QObject
     Q_OBJECT
 public:
     explicit QOpenRemoteAdapter(QObjectRegistry &registry, QObject *parent = nullptr);
+    static QJsonValue serialize(const QVariant &variant);
 
 public slots:
     void handleMessage(const QByteArray &message);

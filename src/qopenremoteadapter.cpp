@@ -5,6 +5,8 @@
 #include <QJsonObject>
 #include <QLoggingCategory>
 
+#include "json.h"
+
 namespace {
 Q_LOGGING_CATEGORY(self, "adapter.json")
 }
@@ -14,6 +16,18 @@ QOpenRemoteAdapter::QOpenRemoteAdapter(QObjectRegistry &registry, QObject *paren
     , _registry{registry}
 {
     connect(&registry, &QObjectRegistry::valueChanged, this, &QOpenRemoteAdapter::onValueChanged);
+}
+
+QJsonValue QOpenRemoteAdapter::serialize(const QVariant &variant)
+{
+    switch (variant.typeId()) {
+    case qMetaTypeId<QDateTime>():
+        return variant.value<QDateTime>().toMSecsSinceEpoch();
+    case qMetaTypeId<QTime>():
+        return variant.value<QTime>().toString("HH:mm:ss");
+    default:
+        return JSON::serialize(variant);
+    }
 }
 
 void QOpenRemoteAdapter::handleMessage(const QByteArray &message)
@@ -67,21 +81,23 @@ void QOpenRemoteAdapter::onValueChanged(const QString &key, const QVariant &valu
     QJsonObject object{
         {"type", "notify"},
         {"key", key},
-        {"value", value.toJsonValue()},
+        {"value", serialize(value)},
     };
 
+    qCDebug(self) << "send notify" << object;
     emit sendMessage(QJsonDocument{object}.toJson());
 }
 
 void QOpenRemoteAdapter::handleSubscribe(const QString &key)
 {
+    qCInfo(self) << "subscribed to key:" << key;
     _subscribed[key] += 1;
 
     auto value = _registry.get(key);
 
     QJsonObject object{
         {"type", "notify"},
-        {"value", value.toJsonValue()},
+        {"value", serialize(value)},
         {"key", key},
     };
 
@@ -90,11 +106,12 @@ void QOpenRemoteAdapter::handleSubscribe(const QString &key)
 
 void QOpenRemoteAdapter::handleCall(const QString &key, const QJsonArray &array)
 {
+    qCInfo(self) << "calling" << key << array;
     auto returnValue = _registry.call(key, array.toVariantList());
 
     QJsonObject object{
         {"type", "return"},
-        {"value", returnValue.toJsonValue()},
+        {"value", serialize(returnValue)},
         {"key", key},
     };
 
@@ -103,6 +120,7 @@ void QOpenRemoteAdapter::handleCall(const QString &key, const QJsonArray &array)
 
 void QOpenRemoteAdapter::handleSet(const QString &key, const QJsonValue &value)
 {
+    qCDebug(self) << "handle set" << key << value;
     _registry.set(key, value);
 }
 
@@ -112,9 +130,10 @@ void QOpenRemoteAdapter::handleGet(const QString &key)
 
     QJsonObject object{
         {"type", "return"},
-        {"value", value.toJsonValue()},
+        {"value", serialize(value)},
         {"key", key},
     };
 
+    qCDebug(self) << "handle get" << object;
     emit sendMessage(QJsonDocument{object}.toJson());
 }

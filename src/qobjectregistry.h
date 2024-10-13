@@ -16,6 +16,9 @@ public:
     void deregisterObject(const QString &name);
     void deregisterObject(QObject *object);
 
+    const QMap<QString, QPair<QObject *, QMetaProperty>> &properties() const;
+    const QMap<QString, QPair<QObject *, QMetaMethod>> &methods() const;
+
 public slots:
     QVariant call(const QString &function, const QVariantList &arguments);
 

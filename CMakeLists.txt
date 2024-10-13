@@ -22,6 +22,8 @@ add_library(${PROJECT_NAME} SHARED
     src/qopenremoteadapter.h
     src/qlistmodel.cpp
     src/qlistmodel.h
+    src/json.cpp
+    src/json.h
 )
 
 
