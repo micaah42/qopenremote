@@ -5,7 +5,7 @@
 #include <QLoggingCategory>
 
 namespace {
-Q_LOGGING_CATEGORY(self, "registry", QtWarningMsg)
+Q_LOGGING_CATEGORY(self, "registry", QtDebugMsg)
 }
 
 QObjectRegistry::QObjectRegistry(QObject *parent)
@@ -24,6 +24,8 @@ void QObjectRegistry::registerObject(const QString &name, QObject *object)
     auto metaObject = object->metaObject();
     qCInfo(self) << this << "register object" << metaObject->className() << name;
 
+    connect(object, &QObject::destroyed, this, [this, name]() { this->deregisterObject(name); });
+
     // register properties
 
     for (int i = 0; i < metaObject->propertyCount(); ++i) {
@@ -39,13 +41,13 @@ void QObjectRegistry::registerObject(const QString &name, QObject *object)
         auto methodName = QString{"%1.%2"}.arg(name, method.name());
         this->registerMethod(methodName, object, method);
     }
-
-    connect(object, &QObject::destroyed, this, [this, object]() { this->deregisterObject(object); });
 }
 
 void QObjectRegistry::deregisterObject(const QString &name)
 {
-    _properties.removeIf([name](decltype(_properties)::iterator it) { return it.key().startsWith(name); });
+    //_properties.removeIf([name](decltype(_properties)::iterator it) { return it.key().startsWith(name); });
+    _get.removeIf([name](decltype(_get)::iterator it) { return it.key().startsWith(name); });
+    _set.removeIf([name](decltype(_set)::iterator it) { return it.key().startsWith(name); });
     _methods.removeIf([name](decltype(_methods)::iterator it) { return it.key().startsWith(name); });
 }
 
@@ -53,8 +55,8 @@ void QObjectRegistry::deregisterObject(QObject *object)
 {
     qCInfo(self) << "deregister object:" << object;
 
-    auto it0 = std::remove_if(_properties.begin(), _properties.end(), [object](const QPair<QObject *, QMetaProperty> &v) { return object == v.first; });
-    _properties.erase(it0, _properties.end());
+    //auto it0 = std::remove_if(_get.begin(), _get.end(), [object](const QPair<QObject *, QMetaProperty> &v) { return object == v.first; });
+    //_properties.erase(it0, _properties.end());
 
     auto it1 = std::remove_if(_methods.begin(), _methods.end(), [object](const QPair<QObject *, QMetaMethod> &v) { return object == v.first; });
     _methods.erase(it1, _methods.end());
@@ -62,34 +64,36 @@ void QObjectRegistry::deregisterObject(QObject *object)
 
 QVariant QObjectRegistry::get(const QString &key)
 {
-    auto it = _properties.find(key);
+    auto it = _get.find(key);
 
-    if (it == _properties.end()) {
+    if (it == _get.end()) {
         qCCritical(self) << "no getter for key:" << key;
         return QVariant{};
     }
 
-    return it->second.read(it->first);
-#if 0
+#if 1
     return (*it)();
+#else
+    return it->second.read(it->first);
 #endif
 }
 
 void QObjectRegistry::set(const QString &key, const QVariant &value)
 {
-    auto it = _properties.find(key);
+    auto it = _set.find(key);
+    //auto it = _properties.find(key);
 
-    if (it == _properties.end()) {
+    if (it == _set.end()) {
         qCCritical(self) << "no setter for key:" << key;
         return;
     }
 
-    if (!value.canConvert(it->second.metaType())) {
-        qCCritical(self) << "cannot convert" << value << "to" << it->second.typeName();
-        return;
-    }
+    //if (!value.canConvert(it->metaType())) {
+    //    qCCritical(self) << "cannot convert" << value << "to" << it->second.typeName();
+    //    return;
+    //}
 
-    it->second.write(it->first, value);
+    (*it)(value);
 }
 
 QVariant QObjectRegistry::call(const QString &function, const QVariantList &arguments)
@@ -109,10 +113,10 @@ void QObjectRegistry::onNotifySignal()
     (*notifyIt)();
 }
 
-const QMap<QString, QPair<QObject *, QMetaProperty> > &QObjectRegistry::properties() const
-{
-    return _properties;
-}
+//const QMap<QString, QPair<QObject *, QMetaProperty> > &QObjectRegistry::properties() const
+//{
+//    return _properties;
+//}
 
 const QMap<QString, QPair<QObject *, QMetaMethod> > &QObjectRegistry::methods() const
 {
@@ -123,15 +127,25 @@ void QObjectRegistry::registerProperty(const QString &propertyName, QObject *obj
 {
     qCInfo(self) << "register property:" << property.typeName() << propertyName;
 
-    _properties[propertyName] = {object, property};
+    // _properties[propertyName] = {object, property};
 
     const auto propertyValue = property.read(object);
-    emit valueChanged(propertyName, propertyValue);
 
     if (!property.isReadable()) {
         qCCritical(self) << "cannot handle ungettable property";
         return;
     }
+
+    if (property.isWritable()) {
+        _set[propertyName] = [object, property](const QVariant &value) { property.write(object, value); };
+    }
+
+    _get[propertyName] = [object, property]() {
+        //
+        return property.read(object);
+    };
+
+    emit valueChanged(propertyName, propertyValue);
 
     if (property.hasNotifySignal()) {
         _notify[{object, property.notifySignalIndex()}] = [this, propertyName, property, object]() {
@@ -200,6 +214,7 @@ void QObjectRegistry::registerProperty(const QString &propertyName, QObject *obj
                 if (variantType.flags().testFlag(QMetaType::PointerToQObject)) {
                     auto variant = newValue[i].value<QObject *>();
                     auto variantName = QString{"%1.%2"}.arg(propertyName, QString::number(i));
+                    _get[variantName] = [variant]() { return QVariant::fromValue(variant); };
 
                     qCDebug(self) << "recurse:" << variantName << variant;
                     this->registerObject(variantName, variant);
@@ -213,6 +228,7 @@ void QObjectRegistry::registerProperty(const QString &propertyName, QObject *obj
             if (variantType.flags().testFlag(QMetaType::PointerToQObject)) {
                 auto variant = variantList[i].value<QObject *>();
                 auto variantName = QString{"%1.%2"}.arg(propertyName, QString::number(i));
+                _get[variantName] = [variant = variantList[i]]() { return QVariant::fromValue(variant); };
 
                 qCDebug(self) << "recurse:" << variantName << variant;
                 this->registerObject(variantName, variant);

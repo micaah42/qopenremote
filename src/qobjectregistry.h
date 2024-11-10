@@ -36,7 +36,9 @@ private slots:
 
 private:
     QMap<QString, QPair<QObject *, QMetaMethod>> _methods;
-    QMap<QString, QPair<QObject *, QMetaProperty>> _properties;
+    //QMap<QString, QPair<QObject *, QMetaProperty>> _properties;
+    QMap<QString, std::function<void(const QVariant &)>> _set;
+    QMap<QString, std::function<QVariant()>> _get;
 
     QMap<QPair<QObject *, int>, std::function<void()>> _notify;
     QMap<QString, std::function<QVariant(const QVariantList &)>> _call;

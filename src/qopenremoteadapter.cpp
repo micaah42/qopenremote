@@ -18,18 +18,6 @@ QOpenRemoteAdapter::QOpenRemoteAdapter(QObjectRegistry &registry, QObject *paren
     connect(&registry, &QObjectRegistry::valueChanged, this, &QOpenRemoteAdapter::onValueChanged);
 }
 
-QJsonValue QOpenRemoteAdapter::serialize(const QVariant &variant)
-{
-    switch (variant.typeId()) {
-    case qMetaTypeId<QDateTime>():
-        return variant.value<QDateTime>().toMSecsSinceEpoch();
-    case qMetaTypeId<QTime>():
-        return variant.value<QTime>().toString("HH:mm:ss");
-    default:
-        return JSON::serialize(variant);
-    }
-}
-
 void QOpenRemoteAdapter::handleMessage(const QByteArray &message)
 {
     QJsonParseError error;
@@ -81,7 +69,7 @@ void QOpenRemoteAdapter::onValueChanged(const QString &key, const QVariant &valu
     QJsonObject object{
         {"type", "notify"},
         {"key", key},
-        {"value", serialize(value)},
+        {"value", JSON::serialize(value)},
     };
 
     qCDebug(self) << "send notify" << object;
@@ -97,7 +85,7 @@ void QOpenRemoteAdapter::handleSubscribe(const QString &key)
 
     QJsonObject object{
         {"type", "notify"},
-        {"value", serialize(value)},
+        {"value", JSON::serialize(value)},
         {"key", key},
     };
 
@@ -111,7 +99,7 @@ void QOpenRemoteAdapter::handleCall(const QString &key, const QJsonArray &array)
 
     QJsonObject object{
         {"type", "return"},
-        {"value", serialize(returnValue)},
+        {"value", JSON::serialize(returnValue)},
         {"key", key},
     };
 
@@ -130,7 +118,7 @@ void QOpenRemoteAdapter::handleGet(const QString &key)
 
     QJsonObject object{
         {"type", "return"},
-        {"value", serialize(value)},
+        {"value", JSON::serialize(value)},
         {"key", key},
     };
 

@@ -57,12 +57,21 @@ QJsonValue JSON::serialize(const QVariant &variant)
         return object;
     }
 
-    else if (variant.canView<QVariantList>() && !variant.canConvert<QString>()) {
+    else if (variant.canConvert<QVariantList>() && variant.typeId() != QMetaType::QString) {
         QJsonArray array;
         const auto list = variant.value<QVariantList>();
         for (const auto &x : qAsConst(list))
             array.append(serialize(x));
         return array;
+    }
+
+    switch (variant.typeId()) {
+    case QMetaType::QDateTime:
+        return variant.value<QDateTime>().toMSecsSinceEpoch();
+    case QMetaType::QTime:
+        return QDateTime{QDate{0, 0, 0}, variant.value<QTime>()}.toMSecsSinceEpoch();
+    case QMetaType::QDate:
+        return QDateTime{variant.value<QDate>(), QTime{0, 0}}.toMSecsSinceEpoch();
     }
 
     return variant.toJsonValue();
@@ -77,6 +86,11 @@ QVariant JSON::deserialize(const QJsonValue &value)
         }
 
         QMetaType metaType{value["__typeId"].toInt()};
+
+        if (!metaType.isValid()) {
+            qCCritical(self) << "cannot serialize unregistered type";
+            return QJsonValue::Undefined;
+        }
 
         if (!metaType.isDefaultConstructible()) {
             qCWarning(self) << "no default ctor. cannot deserialize into" << metaType.name();
@@ -107,6 +121,16 @@ QVariant JSON::deserialize(const QJsonValue &value)
 
             return QVariant::fromValue(object);
         }
+    }
+
+    else if (value.isArray()) {
+        QVariantList list;
+        const auto array = value.toArray();
+
+        for (auto const &value : array)
+            list.append(serialize(value));
+
+        return list;
     }
 
     return value.toVariant();
