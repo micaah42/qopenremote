@@ -1,4 +1,4 @@
-#include "qopenremoteadapter.h"
+#include "jsonadapter.h"
 
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -11,14 +11,14 @@ namespace {
 Q_LOGGING_CATEGORY(self, "adapter.json")
 }
 
-QOpenRemoteAdapter::QOpenRemoteAdapter(QObjectRegistry &registry, QObject *parent)
+JSONAdapter::JSONAdapter(QObjectRegistry &registry, QObject *parent)
     : QObject{parent}
     , _registry{registry}
 {
-    connect(&registry, &QObjectRegistry::valueChanged, this, &QOpenRemoteAdapter::onValueChanged);
+    connect(&registry, &QObjectRegistry::valueChanged, this, &JSONAdapter::onValueChanged);
 }
 
-void QOpenRemoteAdapter::handleMessage(const QByteArray &message)
+void JSONAdapter::handleMessage(const QByteArray &message)
 {
     QJsonParseError error;
     auto doc = QJsonDocument::fromJson(message, &error);
@@ -61,7 +61,7 @@ void QOpenRemoteAdapter::handleMessage(const QByteArray &message)
         qCCritical(self) << "invalid type:" << type << key;
 }
 
-void QOpenRemoteAdapter::onValueChanged(const QString &key, const QVariant &value)
+void JSONAdapter::onValueChanged(const QString &key, const QVariant &value)
 {
     if (_subscribed[key] == 0)
         return;
@@ -76,7 +76,7 @@ void QOpenRemoteAdapter::onValueChanged(const QString &key, const QVariant &valu
     emit sendMessage(QJsonDocument{object}.toJson());
 }
 
-void QOpenRemoteAdapter::handleSubscribe(const QString &key)
+void JSONAdapter::handleSubscribe(const QString &key)
 {
     qCInfo(self) << "subscribed to key:" << key;
     _subscribed[key] += 1;
@@ -92,7 +92,7 @@ void QOpenRemoteAdapter::handleSubscribe(const QString &key)
     emit sendMessage(QJsonDocument{object}.toJson());
 }
 
-void QOpenRemoteAdapter::handleCall(const QString &key, const QJsonArray &array)
+void JSONAdapter::handleCall(const QString &key, const QJsonArray &array)
 {
     qCInfo(self) << "calling" << key << array;
     auto returnValue = _registry.call(key, array.toVariantList());
@@ -106,13 +106,13 @@ void QOpenRemoteAdapter::handleCall(const QString &key, const QJsonArray &array)
     emit sendMessage(QJsonDocument{object}.toJson());
 }
 
-void QOpenRemoteAdapter::handleSet(const QString &key, const QJsonValue &value)
+void JSONAdapter::handleSet(const QString &key, const QJsonValue &value)
 {
     qCDebug(self) << "handle set" << key << value;
     _registry.set(key, value);
 }
 
-void QOpenRemoteAdapter::handleGet(const QString &key)
+void JSONAdapter::handleGet(const QString &key)
 {
     auto value = _registry.get(key);
 

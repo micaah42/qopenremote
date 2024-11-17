@@ -1,15 +1,15 @@
-#ifndef QOPENREMOTEADAPTER_H
-#define QOPENREMOTEADAPTER_H
+#ifndef JSONADAPTER_H
+#define JSONADAPTER_H
 
 #include <QObject>
 
 #include "qobjectregistry.h"
 
-class QOpenRemoteAdapter : public QObject
+class JSONAdapter : public QObject
 {
     Q_OBJECT
 public:
-    explicit QOpenRemoteAdapter(QObjectRegistry &registry, QObject *parent = nullptr);
+    explicit JSONAdapter(QObjectRegistry &registry, QObject *parent = nullptr);
     //static QJsonValue serialize(const QVariant &variant);
 
 public slots:
@@ -31,4 +31,4 @@ private:
     QObjectRegistry &_registry;
 };
 
-#endif // QOPENREMOTEADAPTER_H
+#endif // JSONADAPTER_H

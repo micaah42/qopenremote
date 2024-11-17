@@ -7,17 +7,17 @@ template<class T>
 QVariantList qToVariantList(const QList<T> list)
 {
     QVariantList variants;
-    for (auto const &v : qAsConst(list))
+    for (auto const &v : std::as_const(list))
         variants.append(QVariant::fromValue(v));
 
     return variants;
 }
 
 template<class T>
-const QList<T> qFromVariantList(QVariantList variants)
+const QList<T> qFromVariantList(const QVariantList &variants)
 {
     QList<T> list;
-    for (auto const &v : qAsConst(variants))
+    for (auto const &v : std::as_const(variants))
         list.append(v.value<T>());
 
     return list;
@@ -80,7 +80,12 @@ class QListModel : public QListModelBase
 {
 public:
     explicit QListModel(QObject *parent = nullptr)
-        : QListModelBase{parent} {};
+        : QListModelBase{parent}
+    {}
+
+    // STL-style
+    typename QList<T>::ConstIterator cbegin() const { return _list.cbegin(); }
+    typename QList<T>::ConstIterator cend() const { return _list.cend(); }
 
     virtual QVariant atX(int i) const override { return QVariant::fromValue(_list.at(i)); };
     const T &at(int i) const { return _list.at(i); };
@@ -160,6 +165,7 @@ public:
         Q_ASSERT(variant.canConvert<T>());
         return this->removeAll(variant.value<T>());
     };
+
     int removeAll(const T &t)
     {
         int i = 0;

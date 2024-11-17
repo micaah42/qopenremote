@@ -60,7 +60,7 @@ QJsonValue JSON::serialize(const QVariant &variant)
     else if (variant.canConvert<QVariantList>() && variant.typeId() != QMetaType::QString) {
         QJsonArray array;
         const auto list = variant.value<QVariantList>();
-        for (const auto &x : qAsConst(list))
+        for (const auto &x : std::as_const(list))
             array.append(serialize(x));
         return array;
     }
