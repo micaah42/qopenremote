@@ -8,7 +8,7 @@
 #include "json.h"
 
 namespace {
-Q_LOGGING_CATEGORY(self, "adapter.json")
+Q_LOGGING_CATEGORY(self, "adapter.json", QtWarningMsg)
 }
 
 JSONAdapter::JSONAdapter(QObjectRegistry &registry, QObject *parent)
