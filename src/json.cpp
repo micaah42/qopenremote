@@ -7,7 +7,7 @@
 #include <QMetaProperty>
 
 namespace {
-Q_LOGGING_CATEGORY(self, "JSON")
+Q_LOGGING_CATEGORY(self, "JSON", QtWarningMsg)
 }
 
 QByteArray JSON::stringify(const QVariant &variant)
