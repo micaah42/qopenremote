@@ -33,12 +33,18 @@ QVariant JSON::parse(const QByteArray &json)
 
 QJsonValue JSON::serialize(const QVariant &variant)
 {
+#if QT_VERSION_MAJOR == 5
+    auto metaType = QMetaType{variant.userType()};
+    auto typeId = variant.userType();
+#else
     auto metaType = variant.metaType();
+    auto typeId = variant.typeId();
+#endif
 
     if (metaType.flags().testFlag(QMetaType::PointerToQObject)) {
         auto metaObject = metaType.metaObject();
 
-        QJsonObject object{{"__typeId", variant.typeId()}};
+        QJsonObject object{{"__typeId", typeId}};
         for (auto i = 0; i < metaObject->propertyCount(); ++i) {
             auto property = metaObject->property(i);
             object[property.name()] = serialize(property.read(variant.value<QObject *>()));
@@ -49,7 +55,7 @@ QJsonValue JSON::serialize(const QVariant &variant)
     else if (metaType.flags().testFlag(QMetaType::PointerToGadget)) {
         auto metaObject = metaType.metaObject();
 
-        QJsonObject object{{"__typeId", variant.typeId()}};
+        QJsonObject object{{"__typeId", typeId}};
         for (auto i = 0; i < metaObject->propertyCount(); ++i) {
             auto property = metaObject->property(i);
             object[property.name()] = serialize(property.readOnGadget(variant.constData()));
@@ -57,7 +63,7 @@ QJsonValue JSON::serialize(const QVariant &variant)
         return object;
     }
 
-    else if (variant.canConvert<QVariantList>() && variant.typeId() != QMetaType::QString) {
+    else if (variant.canConvert<QVariantList>() && typeId != QMetaType::QString) {
         QJsonArray array;
         const auto list = variant.value<QVariantList>();
         for (const auto &x : std::as_const(list))
@@ -65,7 +71,7 @@ QJsonValue JSON::serialize(const QVariant &variant)
         return array;
     }
 
-    switch (variant.typeId()) {
+    switch (typeId) {
     case QMetaType::QDateTime:
         return variant.value<QDateTime>().toMSecsSinceEpoch();
     case QMetaType::QTime:
@@ -92,10 +98,12 @@ QVariant JSON::deserialize(const QJsonValue &value)
             return QJsonValue::Undefined;
         }
 
+#if QT_VERSION_MAJOR == 6
         if (!metaType.isDefaultConstructible()) {
             qCWarning(self) << "no default ctor. cannot deserialize into" << metaType.name();
             return QJsonValue::Undefined;
         }
+#endif
 
         if (metaType.flags() | QMetaType::PointerToQObject) {
             auto metaObject = metaType.metaObject();
