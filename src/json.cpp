@@ -35,10 +35,16 @@ QJsonValue JSON::serialize(const QVariant &variant)
 {
     auto metaType = variant.metaType();
 
+    if (variant.isNull())
+        return QJsonValue::Null;
+
+    if (!variant.isValid())
+        return QJsonValue::Undefined;
+
     if (metaType.flags().testFlag(QMetaType::PointerToQObject)) {
         auto metaObject = metaType.metaObject();
 
-        QJsonObject object{{"__typeId", variant.typeId()}};
+        QJsonObject object{{"__typeId", variant.typeId()}, {"__typeName", metaType.name()}};
         for (auto i = 0; i < metaObject->propertyCount(); ++i) {
             auto property = metaObject->property(i);
             object[property.name()] = serialize(property.read(variant.value<QObject *>()));
@@ -46,10 +52,10 @@ QJsonValue JSON::serialize(const QVariant &variant)
         return object;
     }
 
-    else if (metaType.flags().testFlag(QMetaType::PointerToGadget)) {
+    if (metaType.flags().testFlag(QMetaType::PointerToGadget)) {
         auto metaObject = metaType.metaObject();
 
-        QJsonObject object{{"__typeId", variant.typeId()}};
+        QJsonObject object{{"__typeId", variant.typeId()}, {"__typeName", metaType.name()}};
         for (auto i = 0; i < metaObject->propertyCount(); ++i) {
             auto property = metaObject->property(i);
             object[property.name()] = serialize(property.readOnGadget(variant.constData()));
@@ -57,7 +63,7 @@ QJsonValue JSON::serialize(const QVariant &variant)
         return object;
     }
 
-    else if (variant.canConvert<QVariantList>() && variant.typeId() != QMetaType::QString) {
+    if (variant.canConvert<QVariantList>() && variant.typeId() != QMetaType::QString) {
         QJsonArray array;
         const auto list = variant.value<QVariantList>();
         for (const auto &x : std::as_const(list))
@@ -77,7 +83,7 @@ QJsonValue JSON::serialize(const QVariant &variant)
     return variant.toJsonValue();
 }
 
-QVariant JSON::deserialize(const QJsonValue &value)
+QVariant JSON::deserialize(const QJsonValue &value, const QMetaType &type)
 {
     if (value.isObject()) {
         if (!value["__typeId"].isDouble()) {
@@ -88,7 +94,16 @@ QVariant JSON::deserialize(const QJsonValue &value)
         QMetaType metaType{value["__typeId"].toInt()};
 
         if (!metaType.isValid()) {
-            qCCritical(self) << "cannot serialize unregistered type";
+            metaType = QMetaType::fromName(value["__typeName"].toString().toUtf8());
+
+            if (!metaType.isValid()) {
+                qCCritical(self) << "failed to deserialize" << value;
+                return QJsonValue::Undefined;
+            }
+        }
+
+        if (type.isValid() && metaType != type) {
+            qCCritical(self) << "expected:" << type << "but got" << metaType << value;
             return QJsonValue::Undefined;
         }
 
@@ -109,7 +124,8 @@ QVariant JSON::deserialize(const QJsonValue &value)
                     return QJsonValue::Undefined;
                 }
 
-                auto propertyValue = deserialize(value[property.name()]);
+                auto propertyValue = deserialize(value[property.name()], property.metaType());
+
                 if (propertyValue == QJsonValue::Undefined) {
                     qCWarning(self) << "failed to serialize property!";
                     return QJsonValue::Undefined;
@@ -128,9 +144,18 @@ QVariant JSON::deserialize(const QJsonValue &value)
         const auto array = value.toArray();
 
         for (auto const &value : array)
-            list.append(serialize(value));
+            list.append(deserialize(value));
 
         return list;
+    }
+
+    switch (type.id()) {
+    case QMetaType::QDateTime:
+        return QDateTime::fromMSecsSinceEpoch(value.toDouble());
+    case QMetaType::QTime:
+        return QDateTime::fromMSecsSinceEpoch(value.toDouble()).time();
+    case QMetaType::QDate:
+        return QDateTime::fromMSecsSinceEpoch(value.toDouble()).date();
     }
 
     return value.toVariant();

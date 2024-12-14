@@ -21,7 +21,7 @@ public:
 
     template<class T>
     static T deserialize(const QJsonValue &value);
-    static QVariant deserialize(const QJsonValue &value);
+    static QVariant deserialize(const QJsonValue &value, const QMetaType &type = QMetaType());
 
 private:
     // QHash<int, std::function<QJsonValue(const QVariant &)>> _serialize;
@@ -42,7 +42,7 @@ QByteArray JSON::stringify(const T &t)
 template<class T>
 T JSON::deserialize(const QJsonValue &value)
 {
-    return deserialize(value).value<T>();
+    return deserialize(value, QMetaType::fromType<T>()).template value<T>();
 }
 
 template<class T>

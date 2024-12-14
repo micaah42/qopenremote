@@ -5,7 +5,7 @@
 #include <QLoggingCategory>
 
 namespace {
-Q_LOGGING_CATEGORY(self, "registry", QtDebugMsg)
+Q_LOGGING_CATEGORY(self, "registry") //, QtWarningMsg
 }
 
 QObjectRegistry::QObjectRegistry(QObject *parent)
@@ -18,12 +18,15 @@ QObjectRegistry::QObjectRegistry(QObject *parent)
 
 void QObjectRegistry::registerObject(const QString &name, QObject *object)
 {
-    if (object == nullptr)
+    // todo: check collisions etc
+
+    if (object == nullptr) {
+        _get[name] = []() { return QVariant(); };
         return;
+    }
 
     auto metaObject = object->metaObject();
     qCInfo(self) << this << "register object" << metaObject->className() << name;
-
     connect(object, &QObject::destroyed, this, [this, name]() { this->deregisterObject(name); });
 
     // register properties
@@ -45,6 +48,8 @@ void QObjectRegistry::registerObject(const QString &name, QObject *object)
 
 void QObjectRegistry::deregisterObject(const QString &name)
 {
+    qCInfo(self) << "deregister object:" << name;
+
     //_properties.removeIf([name](decltype(_properties)::iterator it) { return it.key().startsWith(name); });
     _get.removeIf([name](decltype(_get)::iterator it) { return it.key().startsWith(name); });
     _set.removeIf([name](decltype(_set)::iterator it) { return it.key().startsWith(name); });
@@ -141,22 +146,10 @@ void QObjectRegistry::registerProperty(const QString &propertyName, QObject *obj
     }
 
     _get[propertyName] = [object, property]() {
-        //
         return property.read(object);
     };
 
     emit valueChanged(propertyName, propertyValue);
-
-    if (property.hasNotifySignal()) {
-        _notify[{object, property.notifySignalIndex()}] = [this, propertyName, property, object]() {
-            const auto propertyValue = property.read(object);
-            qCDebug(self) << "object property changed" << propertyName << propertyValue;
-            emit valueChanged(propertyName, propertyValue);
-        };
-
-        connect(object, &QObject::destroyed, this, [this, object, index = property.notifySignalIndex()] { _notify.remove({object, index}); });
-        connect(object, property.notifySignal(), this, _notifierSlot);
-    }
 
     // handle special types
 
@@ -176,7 +169,7 @@ void QObjectRegistry::registerProperty(const QString &propertyName, QObject *obj
         this->registerObject(propertyName, propertyValue);
 
         if (property.hasNotifySignal()) {
-            _notify[{object, property.notifySignalIndex()}] = [this, propertyName, property, object]() {
+            _notify[{object, property.notifySignalIndex()}] = [this, propertyName, property, object, propertyValue]() {
                 const auto newValue = property.read(object);
 
                 qCDebug(self) << "value changed" << propertyName << newValue;
@@ -185,18 +178,19 @@ void QObjectRegistry::registerProperty(const QString &propertyName, QObject *obj
                 // todo: this overwrites the read, write and call methods of the old object, but the old objects
                 // destroy signal would still remove them from cb maps if it gets deleted
 
+                disconnect(propertyValue, property.notifySignal(), this, _notifierSlot);
                 this->deregisterObject(propertyName);
-                this->registerObject(propertyName, newValue.value<QObject *>());
+                this->registerProperty(propertyName, object, property);
             };
 
             connect(object, &QObject::destroyed, this, [this, object, index = property.notifySignalIndex()] { _notify.remove({object, index}); });
-            connect(object, property.notifySignal(), this, _notifierSlot);
+            // connect(object, property.notifySignal(), this, _notifierSlot);
         }
     }
 
     // handle simple arrays
 
-    if (propertyValue.canConvert<QVariantList>() && propertyValue.typeId() != QMetaType::QString) {
+    else if (propertyValue.canConvert<QVariantList>() && propertyValue.typeId() != QMetaType::QString) {
         auto variantList = propertyValue.value<QVariantList>();
         qCDebug(self) << "recurse list like:" << variantList << propType.name();
 
@@ -234,6 +228,17 @@ void QObjectRegistry::registerProperty(const QString &propertyName, QObject *obj
                 this->registerObject(variantName, variant);
             }
         }
+    }
+
+    else if (property.hasNotifySignal()) {
+        _notify[{object, property.notifySignalIndex()}] = [this, propertyName, property, object]() {
+            const auto propertyValue = property.read(object);
+            qCDebug(self) << "object property changed" << propertyName << propertyValue;
+            emit valueChanged(propertyName, propertyValue);
+        };
+
+        connect(object, &QObject::destroyed, this, [this, object, index = property.notifySignalIndex()] { _notify.remove({object, index}); });
+        connect(object, property.notifySignal(), this, _notifierSlot);
     }
 }
 
