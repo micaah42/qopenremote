@@ -5,7 +5,7 @@
 #include <jsonadapter.h>
 
 namespace {
-Q_LOGGING_CATEGORY(self, "server")
+Q_LOGGING_CATEGORY(self, "server", QtWarningMsg)
 }
 
 WebSocketServer::WebSocketServer(QObjectRegistry &registry, QObject *parent)

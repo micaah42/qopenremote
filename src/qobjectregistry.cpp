@@ -5,7 +5,7 @@
 #include <QLoggingCategory>
 
 namespace {
-Q_LOGGING_CATEGORY(self, "registry") //, QtWarningMsg
+Q_LOGGING_CATEGORY(self, "registry", QtWarningMsg)
 }
 
 QObjectRegistry::QObjectRegistry(QObject *parent)
@@ -27,6 +27,7 @@ void QObjectRegistry::registerObject(const QString &name, QObject *object)
 
     auto metaObject = object->metaObject();
     qCInfo(self) << this << "register object" << metaObject->className() << name;
+
     connect(object, &QObject::destroyed, this, [this, name]() { this->deregisterObject(name); });
 
     // register properties
@@ -50,10 +51,26 @@ void QObjectRegistry::deregisterObject(const QString &name)
 {
     qCInfo(self) << "deregister object:" << name;
 
-    //_properties.removeIf([name](decltype(_properties)::iterator it) { return it.key().startsWith(name); });
+#if QT_VERSION_MAJOR == 6
     _get.removeIf([name](decltype(_get)::iterator it) { return it.key().startsWith(name); });
     _set.removeIf([name](decltype(_set)::iterator it) { return it.key().startsWith(name); });
     _methods.removeIf([name](decltype(_methods)::iterator it) { return it.key().startsWith(name); });
+#else
+    auto getters = _get.keys();
+    for (const auto &getter : std::as_const(getters))
+        if (getter.startsWith(name))
+            _get.remove(getter);
+
+    auto setters = _set.keys();
+    for (const auto &setter : std::as_const(setters))
+        if (setter.startsWith(name))
+            _set.remove(setter);
+
+    auto methods = _methods.keys();
+    for (const auto &method : std::as_const(methods))
+        if (method.startsWith(name))
+            _methods.remove(method);
+#endif
 }
 
 void QObjectRegistry::deregisterObject(QObject *object)
@@ -64,7 +81,13 @@ void QObjectRegistry::deregisterObject(QObject *object)
     //_properties.erase(it0, _properties.end());
 
     auto it1 = std::remove_if(_methods.begin(), _methods.end(), [object](const QPair<QObject *, QMetaMethod> &v) { return object == v.first; });
+
+#if QT_VERSION_MAJOR == 6
     _methods.erase(it1, _methods.end());
+#else
+    while (it1 != _methods.end())
+        _methods.erase(it1);
+#endif
 }
 
 QVariant QObjectRegistry::get(const QString &key)
@@ -146,6 +169,7 @@ void QObjectRegistry::registerProperty(const QString &propertyName, QObject *obj
     }
 
     _get[propertyName] = [object, property]() {
+        //
         return property.read(object);
     };
 
@@ -266,7 +290,13 @@ void QObjectRegistry::registerMethod(const QString &methodName, QObject *object,
 
             QVariant copy{args[i]};
 
-            if (!copy.convert(QMetaType{method.parameterType(i)})) {
+#if QT_VERSION_MAJOR == 5
+            auto convertTarget = QMetaType{method.parameterType(i)}.id();
+#else
+            auto convertTarget = QMetaType{method.parameterType(i)};
+#endif
+
+            if (!copy.convert(convertTarget)) {
                 qCCritical(self) << "cannot convert" << args[i] << "to" << method.parameterNames()[i];
                 return QVariant();
             }
@@ -274,9 +304,15 @@ void QObjectRegistry::registerMethod(const QString &methodName, QObject *object,
             variants.append(copy);
         }
 
+#if QT_VERSION_MAJOR == 5
+        auto returnType = QMetaType{method.returnType()};
+#else
+        auto returnType = method.returnMetaType();
+#endif
+
         QList<QGenericArgument> gArgs;
         for (auto const &variant : variants) {
-            QGenericArgument gArg(method.returnMetaType().name(), const_cast<void *>(variant.constData()));
+            QGenericArgument gArg(returnType.name(), const_cast<void *>(variant.constData()));
             gArgs.append(gArg);
         }
 
