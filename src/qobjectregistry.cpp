@@ -246,7 +246,10 @@ void QObjectRegistry::registerProperty(const QString &propertyName, QObject *obj
             if (variantType.flags().testFlag(QMetaType::PointerToQObject)) {
                 auto variant = variantList[i].value<QObject *>();
                 auto variantName = QString{"%1.%2"}.arg(propertyName, QString::number(i));
-                _get[variantName] = [variant = variantList[i]]() { return QVariant::fromValue(variant); };
+                _get[variantName] = [variant = variantList[i]]() {
+                    qCDebug(self) << "@" << variant.value<QObject *>() << variant.value<QObject *>()->dynamicPropertyNames();
+                    return variant;
+                };
 
                 qCDebug(self) << "recurse:" << variantName << variant;
                 this->registerObject(variantName, variant);

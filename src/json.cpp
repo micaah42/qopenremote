@@ -1,5 +1,6 @@
 #include "json.h"
 
+#include <QColor>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -84,6 +85,8 @@ QJsonValue JSON::serialize(const QVariant &variant)
         return QDateTime{QDate{0, 0, 0}, variant.value<QTime>()}.toMSecsSinceEpoch();
     case QMetaType::QDate:
         return QDateTime{variant.value<QDate>(), QTime{0, 0}}.toMSecsSinceEpoch();
+    case QMetaType::QColor:
+        return variant.value<QColor>().name();
     }
 
     return variant.toJsonValue();

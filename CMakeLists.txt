@@ -10,8 +10,8 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS "${CMAXE_CXX_FLAGS} -Wall -Werror")
 
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core WebSockets)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core WebSockets)
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core WebSockets Gui)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core WebSockets Gui)
 
 add_library(${PROJECT_NAME} SHARED
     src/qopenremote_global.h
@@ -38,6 +38,7 @@ target_include_directories(${PROJECT_NAME} PUBLIC
 
 target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt${QT_VERSION_MAJOR}::Core
+    Qt${QT_VERSION_MAJOR}::Gui
     Qt${QT_VERSION_MAJOR}::WebSockets
 )
 
