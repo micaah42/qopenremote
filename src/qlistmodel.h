@@ -81,11 +81,22 @@ class QListModel : public QListModelBase
 public:
     explicit QListModel(QObject *parent = nullptr)
         : QListModelBase{parent}
-    {}
+    {
+        connect(this, &QAbstractListModel::rowsInserted, this, [this](const QModelIndex &parent, int first, int last) {
+            for (int i = first; i <= last; i++)
+                handleInsertedItem(this->at(i), i);
+        });
+        connect(this, &QAbstractListModel::rowsRemoved, this, [this](const QModelIndex &parent, int first, int last) {
+            for (int i = first; i <= last; i++)
+                handleRemovedItem(this->at(i), i);
+        });
+    }
 
     // STL-style
     typename QList<T>::ConstIterator cbegin() const { return _list.cbegin(); }
     typename QList<T>::ConstIterator cend() const { return _list.cend(); }
+    auto begin() const { return _list.begin(); }
+    auto end() const { return _list.end(); }
 
     virtual QVariant atX(int i) const override { return QVariant::fromValue(_list.at(i)); };
     const T &at(int i) const { return _list.at(i); };
@@ -243,6 +254,10 @@ public:
 
     int count(const T &t) const { return _list.count(t); };
     virtual int size() const override { return _list.size(); };
+
+protected:
+    virtual void handleInsertedItem(const T &, int index) {};
+    virtual void handleRemovedItem(const T &, int index) {};
 
 private:
     QList<T> _list;
