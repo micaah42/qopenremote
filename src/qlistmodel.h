@@ -69,10 +69,6 @@ public:
     virtual bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
 
     virtual QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override { return this->atX(index.row()); };
-    // virtual bool insertRows(int row, int count, const QModelIndex &parent = QModelIndex()) override;
-    // virtual bool removeRows(int row, int count, const QModelIndex &parent = QModelIndex()) override;
-    // virtual bool moveRows(const QModelIndex &sourceParent, int sourceRow, int count, const QModelIndex &destinationParent, int destinationChild) override;
-    // virtual void sort(int column, Qt::SortOrder order) override=;
 };
 
 template<class T>
@@ -256,8 +252,8 @@ public:
     virtual int size() const override { return _list.size(); };
 
 protected:
-    virtual void handleInsertedItem(const T &, int index) {};
-    virtual void handleRemovedItem(const T &, int index) {};
+    virtual void handleInsertedItem(T item, int index) {};
+    virtual void handleRemovedItem(T item, int index) {};
 
 private:
     QList<T> _list;

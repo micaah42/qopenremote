@@ -18,7 +18,7 @@ QByteArray JSON::stringify(const QVariant &variant)
     return doc.toJson();
 }
 
-QVariant JSON::parse(const QByteArray &json)
+QVariant JSON::parse(const QByteArray &json, const QMetaType &type)
 {
     QJsonParseError error;
     auto doc = QJsonDocument::fromJson(json, &error);
