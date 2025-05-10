@@ -82,7 +82,7 @@ public:
             for (int i = first; i <= last; i++)
                 handleInsertedItem(this->at(i), i);
         });
-        connect(this, &QAbstractListModel::rowsRemoved, this, [this](const QModelIndex &parent, int first, int last) {
+        connect(this, &QAbstractListModel::rowsAboutToBeRemoved, this, [this](const QModelIndex &parent, int first, int last) {
             for (int i = first; i <= last; i++)
                 handleRemovedItem(this->at(i), i);
         });
@@ -177,8 +177,12 @@ public:
     {
         int i = 0;
 
-        while (this->removeOne(t))
-            i++;
+        for (int i = 0; i < _list.size(); i++) {
+            if (_list[i] == t) {
+                this->removeAt(i);
+                i--;
+            }
+        }
 
         return i;
     };

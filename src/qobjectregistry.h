@@ -12,7 +12,13 @@ class QObjectRegistry : public QObject
 public:
     explicit QObjectRegistry(QObject *parent = nullptr);
 
-    void registerObject(const QString &name, QObject *object);
+    template<class T>
+    void registerObject(const QString &name, T variant)
+    {
+        this->registerObject(name, QVariant::fromValue(variant));
+    };
+
+    void registerObject(const QString &name, const QVariant &variant);
     void deregisterObject(const QString &name);
     void deregisterObject(QObject *object);
 

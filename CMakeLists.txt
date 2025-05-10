@@ -26,6 +26,9 @@ add_library(${PROJECT_NAME} SHARED
     src/qlistmodel.h
     src/json.cpp
     src/json.h
+
+    src/setting.cpp
+    src/setting.h
 )
 
 

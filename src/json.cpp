@@ -100,10 +100,18 @@ QVariant JSON::deserialize(const QJsonValue &value, const QMetaType &type)
             return QJsonValue::Undefined;
         }
 
-        QMetaType metaType{value["__typeId"].toInt()};
+        QMetaType metaType = type;
 
         if (!metaType.isValid()) {
-            metaType = QMetaType::fromName(value["__typeName"].toString().toUtf8());
+            auto id = value["__typeId"].toInt();
+            metaType = QMetaType{id};
+            qCDebug(self) << "trying __typeId" << id;
+        }
+
+        if (!metaType.isValid()) {
+            auto typeName = value["__typeName"].toString().toUtf8();
+            metaType = QMetaType::fromName(typeName);
+            qCDebug(self) << "trying __typeName" << typeName;
 
             if (!metaType.isValid()) {
                 qCCritical(self) << "failed to deserialize" << value;

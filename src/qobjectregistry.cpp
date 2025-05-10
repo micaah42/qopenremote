@@ -16,18 +16,19 @@ QObjectRegistry::QObjectRegistry(QObject *parent)
     _notifierSlot = QObjectRegistry::metaObject()->method(_notifierSlotIdx);
 }
 
-void QObjectRegistry::registerObject(const QString &name, QObject *object)
+void QObjectRegistry::registerObject(const QString &name, const QVariant &variant)
 {
     // todo: check collisions etc
 
-    if (object == nullptr) {
-        _get[name] = []() { return QVariant(); };
+    _get[name] = [variant]() { return variant; };
+
+    if (!variant.canConvert<QObject *>() || variant.isNull())
         return;
-    }
 
+    auto object = variant.value<QObject *>();
     auto metaObject = object->metaObject();
-    qCInfo(self) << this << "register object" << metaObject->className() << name;
 
+    qCInfo(self) << this << "register object" << metaObject->className() << name;
     connect(object, &QObject::destroyed, this, [this, name]() { this->deregisterObject(name); });
 
     // register properties
@@ -187,13 +188,13 @@ void QObjectRegistry::registerProperty(const QString &propertyName, QObject *obj
     // handle qobject*
 
     if (propType.flags().testFlag(QMetaType::PointerToQObject)) {
-        auto propertyValue = property.read(object).value<QObject *>();
-        qCDebug(self) << "recurse object:" << propertyName << propertyValue;
+        auto propertyObject = property.read(object).value<QObject *>();
+        qCDebug(self) << "recurse object:" << propertyName << propertyObject;
 
         this->registerObject(propertyName, propertyValue);
 
         if (property.hasNotifySignal()) {
-            _notify[{object, property.notifySignalIndex()}] = [this, propertyName, property, object, propertyValue]() {
+            _notify[{object, property.notifySignalIndex()}] = [this, propertyName, property, object, propertyObject]() {
                 const auto newValue = property.read(object);
 
                 qCDebug(self) << "value changed" << propertyName << newValue;
@@ -202,7 +203,7 @@ void QObjectRegistry::registerProperty(const QString &propertyName, QObject *obj
                 // todo: this overwrites the read, write and call methods of the old object, but the old objects
                 // destroy signal would still remove them from cb maps if it gets deleted
 
-                disconnect(propertyValue, property.notifySignal(), this, _notifierSlot);
+                disconnect(propertyObject, property.notifySignal(), this, _notifierSlot);
                 this->deregisterObject(propertyName);
                 this->registerProperty(propertyName, object, property);
             };
@@ -235,7 +236,7 @@ void QObjectRegistry::registerProperty(const QString &propertyName, QObject *obj
                     _get[variantName] = [variant]() { return QVariant::fromValue(variant); };
 
                     qCDebug(self) << "recurse:" << variantName << variant;
-                    this->registerObject(variantName, variant);
+                    this->registerObject(variantName, newValue[i]);
                 }
             }
         };
@@ -252,7 +253,7 @@ void QObjectRegistry::registerProperty(const QString &propertyName, QObject *obj
                 };
 
                 qCDebug(self) << "recurse:" << variantName << variant;
-                this->registerObject(variantName, variant);
+                this->registerObject(variantName, variantList[i]);
             }
         }
     }
