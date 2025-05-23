@@ -2,8 +2,50 @@
 #define SETTING_H
 
 #include <QSettings>
+#include <QVariant>
 
-QSettings &getApplicationSettings();
+class QmlSetting : public QObject
+{
+    Q_OBJECT
+    Q_PROPERTY(QVariant value READ value WRITE setValue NOTIFY valueChanged FINAL)
+    Q_PROPERTY(QString key READ key CONSTANT FINAL)
+
+public:
+    explicit QmlSetting(const QString &key, const QVariant &defaultValue = QVariant(), QObject *parent = nullptr, QSettings *settings = nullptr);
+
+    void setValue(const QVariant &newValue);
+    QVariant value() const;
+    QString key() const;
+
+signals:
+    void valueChanged();
+
+private:
+    QSettings &_settings;
+    QVariant _value;
+    QString _key;
+};
+
+class QmlSettings : public QSettings
+{
+    Q_OBJECT
+    Q_PROPERTY(QString fileName READ fileName CONSTANT FINAL)
+public:
+    explicit QmlSettings(const QString &organization, const QString &application = QString(), QObject *parent = nullptr);
+    explicit QmlSettings(Scope scope, QObject *parent = nullptr);
+    explicit QmlSettings(QObject *parent = nullptr);
+
+    QmlSettings(Scope scope, const QString &organization, const QString &application = QString(), QObject *parent = nullptr);
+    QmlSettings(Format format, Scope scope, const QString &organization, const QString &application = QString(), QObject *parent = nullptr);
+    QmlSettings(const QString &fileName, Format format, QObject *parent = nullptr);
+
+public slots:
+    QmlSetting *newSetting(const QString &key, const QVariant &defaultValue, QObject *parent);
+    QVariant value(const QString &key, const QVariant &defaultValue) const;
+    void setValue(const QString &key, const QVariant &newValue);
+};
+
+QmlSettings &getApplicationSettings();
 
 template<class T>
 class Setting
@@ -48,5 +90,4 @@ inline Setting<T>::operator const T &() const
 {
     return _value;
 }
-
 #endif // SETTING_H
