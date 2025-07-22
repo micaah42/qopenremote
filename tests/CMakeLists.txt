@@ -12,3 +12,5 @@ function(qopenremote_add_test TEST_NAME)
 endfunction()
 
 qopenremote_add_test(qobjectregistry-test)
+qopenremote_add_test(json-test)
+

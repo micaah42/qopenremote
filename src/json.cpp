@@ -11,11 +11,61 @@ namespace {
 Q_LOGGING_CATEGORY(self, "JSON", QtWarningMsg)
 }
 
+QHash<int, JSON::Serializer> JSON::_serializers = {
+    {
+        static_cast<int>(QMetaType::QDateTime),
+        {
+            [](const QJsonValue &v) -> QVariant { return v.isNull() ? QDateTime() : QDateTime::fromString(v.toString(), Qt::ISODateWithMs); },
+            [](const QVariant &v) -> QJsonValue {
+                auto dateTime = v.value<QDateTime>();
+                return dateTime.isValid() ? QJsonValue(dateTime.toString(Qt::ISODateWithMs)) : QJsonValue::Null;
+            },
+        },
+    },
+    {
+        static_cast<int>(QMetaType::QTime),
+        {
+            [](const QJsonValue &v) -> QVariant { return v.isNull() ? QTime() : QTime::fromString(v.toString(), "HH:mm:ss.zzz"); },
+            [](const QVariant &v) -> QJsonValue {
+                auto time = v.value<QTime>();
+                return time.isValid() ? QJsonValue(time.toString("HH:mm:ss.zzz")) : QJsonValue::Null;
+            },
+        },
+    },
+    {
+        static_cast<int>(QMetaType::QDate),
+        {
+            [](const QJsonValue &v) -> QVariant { return v.isNull() ? QDate() : QDate::fromString(v.toString(), "yyyy-MM-dd"); },
+            [](const QVariant &v) -> QJsonValue {
+                auto date = v.value<QDate>();
+                return date.isValid() ? QJsonValue(date.toString("yyyy-MM-dd")) : QJsonValue::Null;
+            },
+        },
+    },
+    {
+        static_cast<int>(QMetaType::QColor),
+        {
+            [](const QJsonValue &v) -> QVariant { return v.isNull() ? QColor() : QColor{v.toString()}; },
+            [](const QVariant &v) -> QJsonValue {
+                auto color = v.value<QColor>();
+                return color.isValid() ? QJsonValue(color.name()) : QJsonValue::Null;
+            },
+        },
+    },
+};
+
 QByteArray JSON::stringify(const QVariant &variant)
 {
     auto value = serialize(variant);
-    auto doc = value.isArray() ? QJsonDocument{value.toArray()} : QJsonDocument{value.toObject()};
-    return doc.toJson();
+
+    switch (value.type()) {
+    case QJsonValue::Object:
+        return QJsonDocument{value.toObject()}.toJson();
+    case QJsonValue::Array:
+        return QJsonDocument{value.toArray()}.toJson();
+    default:
+        return "";
+    }
 }
 
 QVariant JSON::parse(const QByteArray &json, const QMetaType &type)
@@ -48,6 +98,11 @@ QJsonValue JSON::serialize(const QVariant &variant)
     if (!variant.isValid())
         return QJsonValue::Undefined;
 
+    auto serializer = _serializers.find(typeId);
+
+    if (serializer != _serializers.end())
+        return serializer->serialize(variant);
+
     if (metaType.flags().testFlag(QMetaType::PointerToQObject)) {
         auto metaObject = metaType.metaObject();
 
@@ -78,22 +133,18 @@ QJsonValue JSON::serialize(const QVariant &variant)
         return array;
     }
 
-    switch (typeId) {
-    case QMetaType::QDateTime:
-        return variant.value<QDateTime>().toMSecsSinceEpoch();
-    case QMetaType::QTime:
-        return QDateTime{QDate{0, 0, 0}, variant.value<QTime>()}.toMSecsSinceEpoch();
-    case QMetaType::QDate:
-        return QDateTime{variant.value<QDate>(), QTime{0, 0}}.toMSecsSinceEpoch();
-    case QMetaType::QColor:
-        return variant.value<QColor>().name();
-    }
-
     return variant.toJsonValue();
 }
 
 QVariant JSON::deserialize(const QJsonValue &value, const QMetaType &type)
 {
+    if (type.isValid()) {
+        auto serializer = _serializers.find(type.id());
+
+        if (serializer != _serializers.end())
+            return serializer->deserialize(value);
+    }
+
     if (value.isObject()) {
         if (!value["__typeId"].isDouble()) {
             qCWarning(self) << "expected '__typeId' string in object" << value;
@@ -166,15 +217,6 @@ QVariant JSON::deserialize(const QJsonValue &value, const QMetaType &type)
             list.append(deserialize(value));
 
         return list;
-    }
-
-    switch (type.id()) {
-    case QMetaType::QDateTime:
-        return QDateTime::fromMSecsSinceEpoch(value.toDouble());
-    case QMetaType::QTime:
-        return QDateTime::fromMSecsSinceEpoch(value.toDouble()).time();
-    case QMetaType::QDate:
-        return QDateTime::fromMSecsSinceEpoch(value.toDouble()).date();
     }
 
     return value.toVariant();

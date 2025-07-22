@@ -24,7 +24,12 @@ public:
     static QVariant deserialize(const QJsonValue &value, const QMetaType &type = QMetaType());
 
 private:
-    // QHash<int, std::function<QJsonValue(const QVariant &)>> _serialize;
+    struct Serializer
+    {
+        std::function<QVariant(const QJsonValue &)> deserialize;
+        std::function<QJsonValue(const QVariant &)> serialize;
+    };
+    static QHash<int, Serializer> _serializers;
 };
 
 template<class T>
