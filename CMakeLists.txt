@@ -13,6 +13,8 @@ set(CMAKE_CXX_FLAGS "${CMAXE_CXX_FLAGS} -Wall -Werror")
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core WebSockets Gui)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core WebSockets Gui)
 
+find_package(Qt6 REQUIRED COMPONENTS Core)
+
 add_library(${PROJECT_NAME} SHARED
     src/qopenremote_global.h
 
@@ -22,14 +24,17 @@ add_library(${PROJECT_NAME} SHARED
     src/websocketserver.h
     src/jsonadapter.cpp
     src/jsonadapter.h
-    src/qlistmodel.cpp
-    src/qlistmodel.h
+    src/listmodel.cpp
+    src/listmodel.h
     src/json.cpp
     src/json.h
 
     src/setting.cpp
     src/setting.h
+    src/sortfilterproxylistmodel.h src/sortfilterproxylistmodel.cpp
 )
+
+target_link_libraries(qopenremote PRIVATE Qt6::Core)
 
 
 set_target_properties(${PROJECT_NAME} PROPERTIES SOVERSION ${PROJECT_VERSION})

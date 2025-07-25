@@ -1,5 +1,5 @@
-#ifndef QLISTMODEL_H
-#define QLISTMODEL_H
+#ifndef LISTMODEL_H
+#define LISTMODEL_H
 
 #include <qvariantlistmodel.h>
 
@@ -23,12 +23,12 @@ const QList<T> qFromVariantList(const QVariantList &variants)
     return list;
 }
 
-class QListModelBase : public QAbstractListModel
+class ListModelBase : public QAbstractListModel
 {
     Q_OBJECT
 
 public:
-    explicit QListModelBase(QObject *parent = nullptr)
+    explicit ListModelBase(QObject *parent = nullptr)
         : QAbstractListModel{parent} {};
 
 public slots:
@@ -72,11 +72,11 @@ public:
 };
 
 template<class T>
-class QListModel : public QListModelBase
+class ListModel : public ListModelBase
 {
 public:
-    explicit QListModel(QObject *parent = nullptr)
-        : QListModelBase{parent}
+    explicit ListModel(QObject *parent = nullptr)
+        : ListModelBase{parent}
     {
         connect(this, &QAbstractListModel::rowsInserted, this, [this](const QModelIndex &parent, int first, int last) {
             for (int i = first; i <= last; i++)
@@ -263,4 +263,4 @@ private:
     QList<T> _list;
 };
 
-#endif // QLISTMODEL_H
+#endif // LISTMODEL_H
