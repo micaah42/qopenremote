@@ -55,6 +55,8 @@ public:
 
     operator const T &() const;
     const T &operator*() const;
+    bool operator==(const T &t);
+    ;
     void operator=(const T &t);
 
 private:
@@ -76,6 +78,12 @@ template<class T>
 inline const T &Setting<T>::operator*() const
 {
     return _value;
+}
+
+template<class T>
+inline bool Setting<T>::operator==(const T &t)
+{
+    return _value == t;
 }
 
 template<class T>
