@@ -1,5 +1,19 @@
 #include "listmodel.h"
 
+ListModelBase::ListModelBase(QObject *parent)
+    : QAbstractListModel{parent}
+{
+    connect(this, &QAbstractListModel::rowsInserted, this, &ListModelBase::lengthChanged);
+    connect(this, &QAbstractListModel::rowsRemoved, this, &ListModelBase::lengthChanged);
+
+    connect(this, &QAbstractListModel::rowsInserted, this, &ListModelBase::asListChanged);
+    connect(this, &QAbstractListModel::rowsRemoved, this, &ListModelBase::asListChanged);
+    connect(this, &QAbstractListModel::layoutChanged, this, &ListModelBase::asListChanged);
+    connect(this, &QAbstractListModel::rowsMoved, this, &ListModelBase::asListChanged);
+
+    connect(this, &QAbstractListModel::dataChanged, this, &ListModelBase::asListChanged);
+}
+
 QVariant ListModelBase::takeAtX(int i)
 {
     auto temp = this->atX(i);
@@ -40,4 +54,9 @@ bool ListModelBase::setData(const QModelIndex &index, const QVariant &value, int
 {
     this->setX(index.row(), value);
     return true;
+}
+
+int ListModelBase::length() const
+{
+    return this->size();
 }

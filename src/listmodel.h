@@ -26,10 +26,11 @@ const QList<T> qFromVariantList(const QVariantList &variants)
 class ListModelBase : public QAbstractListModel
 {
     Q_OBJECT
+    Q_PROPERTY(int length READ length NOTIFY lengthChanged FINAL)
+    Q_PROPERTY(QVariantList asList READ asList WRITE setAsList NOTIFY asListChanged FINAL)
 
 public:
-    explicit ListModelBase(QObject *parent = nullptr)
-        : QAbstractListModel{parent} {};
+    explicit ListModelBase(QObject *parent = nullptr);
 
 public slots:
     virtual QVariant atX(int i) const = 0;
@@ -69,6 +70,20 @@ public:
     virtual bool setData(const QModelIndex &index, const QVariant &value, int role = Qt::EditRole) override;
 
     virtual QVariant data(const QModelIndex &index, int role = Qt::DisplayRole) const override { return this->atX(index.row()); };
+
+    virtual void setAsList(const QVariantList &newAsList) = 0;
+    virtual QVariantList asList() const = 0;
+
+    int length() const;
+
+signals:
+    void lengthChanged();
+
+    void asListChanged();
+
+private:
+    int _length;
+    QVariantList _asList;
 };
 
 template<class T>
@@ -254,6 +269,20 @@ public:
 
     int count(const T &t) const { return _list.count(t); };
     virtual int size() const override { return _list.size(); };
+    const QList<T> &list() const { return _list; }
+
+    virtual QVariantList asList() const override
+    {
+        auto const variantList = qToVariantList(_list);
+        return variantList;
+    };
+
+    virtual void setAsList(const QVariantList &newAsList) override
+    {
+        auto const list = qFromVariantList<T>(newAsList);
+        this->clear();
+        this->append(list);
+    };
 
 protected:
     virtual void handleInsertedItem(T item, int index) {};

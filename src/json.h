@@ -35,7 +35,8 @@ private:
 template<class T>
 T JSON::parse(const QByteArray &json)
 {
-    return parse(json, QMetaType::fromType<T>()).template value<T>();
+    auto variant = parse(json, QMetaType::fromType<T>());
+    return variant.template value<T>();
 }
 
 template<class T>
