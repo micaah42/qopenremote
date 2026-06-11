@@ -33,6 +33,8 @@ add_library(${PROJECT_NAME} SHARED
     src/setting.h
     src/sortfilterproxylistmodel.cpp
     src/sortfilterproxylistmodel.h
+    src/quicktestengine.cpp
+    src/quicktestengine.h 
 )
 
 target_link_libraries(qopenremote PRIVATE Qt6::Core)

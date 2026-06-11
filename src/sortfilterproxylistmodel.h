@@ -3,12 +3,14 @@
 
 #include <QObject>
 #include <QSortFilterProxyModel>
+#include <QtQmlIntegration/QtQmlIntegration>
 
 #include "listmodel.h"
 
 class SortFilterProxyListModelBase : public QSortFilterProxyModel
 {
     Q_OBJECT
+    
     Q_PROPERTY(ListModelBase *listModel READ listModel WRITE setListModel NOTIFY listModelChanged FINAL)
 
 public:

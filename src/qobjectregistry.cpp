@@ -170,7 +170,6 @@ void QObjectRegistry::registerProperty(const QString &propertyName, QObject *obj
     }
 
     _get[propertyName] = [object, property]() {
-        //
         return property.read(object);
     };
 

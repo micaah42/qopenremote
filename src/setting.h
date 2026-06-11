@@ -30,6 +30,7 @@ class QmlSettings : public QSettings
 {
     Q_OBJECT
     Q_PROPERTY(QString fileName READ fileName CONSTANT FINAL)
+
 public:
     explicit QmlSettings(const QString &organization, const QString &application = QString(), QObject *parent = nullptr);
     explicit QmlSettings(Scope scope, QObject *parent = nullptr);
@@ -56,7 +57,6 @@ public:
     operator const T &() const;
     const T &operator*() const;
     bool operator==(const T &t);
-    ;
     void operator=(const T &t);
 
 private:

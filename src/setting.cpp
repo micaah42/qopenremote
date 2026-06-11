@@ -46,7 +46,10 @@ QmlSetting *QmlSettings::newSetting(const QString &key, const QVariant &defaultV
 
 QVariant QmlSettings::value(const QString &key, const QVariant &defaultValue) const
 {
-    return QSettings::value(key, defaultValue);
+    if (defaultValue.isValid())
+        return QSettings::value(key, defaultValue).convert(defaultValue.metaType());
+    else
+        return QSettings::value(key, defaultValue);
 }
 
 void QmlSettings::setValue(const QString &key, const QVariant &newValue)
@@ -70,6 +73,7 @@ void QmlSetting::setValue(const QVariant &newValue)
 {
     if (_value == newValue)
         return;
+
     _value = newValue;
     emit valueChanged();
 }

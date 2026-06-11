@@ -6,6 +6,7 @@
 #include <QJsonObject>
 #include <QLoggingCategory>
 #include <QMetaProperty>
+#include <QSequentialIterable>
 
 namespace {
 Q_LOGGING_CATEGORY(self, "JSON", QtInfoMsg)
@@ -148,58 +149,81 @@ QVariant JSON::deserialize(const QJsonValue &value, const QMetaType &type)
         qCDebug(self) << "loaded from __typeName" << targetType;
     }
 
-    if (targetType.isValid()) {
-        auto serializer = _serializers.find(targetType.id());
-        if (serializer != _serializers.end())
-            return serializer->deserialize(value);
+    if (!targetType.isValid()) {
+        qCDebug(self) << "no target type found, using default conversion for:" << value;
 
-        if (targetType.flags().testFlag(QMetaType::PointerToQObject)) {
-            if (!value.isObject()) {
-                qCWarning(self) << "value should deserialize into a pointer to object but is not an object" << targetType << targetType.flags();
-                return QVariant(targetType);
-            }
+        auto variant = value.toVariant();
 
-            auto metaObject = targetType.metaObject();
-            QObject *object = metaObject->newInstance();
+        if (!variant.isValid())
+            qCWarning(self) << "default conversion failed:" << value;
 
-            if (object == nullptr) {
-                qCCritical(self) << "failed to create object:" << metaObject->className();
-                return QVariant(targetType);
-            }
-
-            qCDebug(self) << "created" << targetType << object;
-
-            for (auto i = 0; i < metaObject->propertyCount(); ++i) {
-                auto property = metaObject->property(i);
-
-                if (value[property.name()].isUndefined()) {
-                    qCWarning(self) << "expected" << property.name() << "for" << targetType.name() << "in" << value;
-                    return QVariant(targetType);
-                }
-
-                auto propertyValue = deserialize(value[property.name()], property.metaType());
-
-                if (!propertyValue.isValid() && property.metaType().id() != QMetaType::QString) {
-                    qCWarning(self) << "failed to deserialize property!";
-                    return QVariant(targetType);
-                }
-
-                qCDebug(self) << "set property" << property.name() << propertyValue << value[property.name()];
-                property.write(object, propertyValue);
-            }
-
-            return QVariant::fromValue(object);
-        }
+        return variant;
     }
 
-    else if (value.isArray()) {
-        QVariantList list;
+    qCDebug(self) << "trying to deserialize" << value << "into" << type;
+
+    auto serializer = _serializers.find(targetType.id());
+    if (serializer != _serializers.end())
+        return serializer->deserialize(value);
+
+    if (targetType.flags().testFlag(QMetaType::PointerToQObject)) {
+        if (!value.isObject()) {
+            qCWarning(self) << "value should deserialize into a pointer to object but is not an object" << targetType << targetType.flags();
+            return QVariant(targetType);
+        }
+
+        auto metaObject = targetType.metaObject();
+        QObject *object = metaObject->newInstance();
+
+        if (object == nullptr) {
+            qCCritical(self) << "failed to create object:" << metaObject->className();
+            return QVariant(targetType);
+        }
+
+        qCDebug(self) << "created" << targetType << object;
+
+        for (auto i = 0; i < metaObject->propertyCount(); ++i) {
+            auto property = metaObject->property(i);
+
+            if (value[property.name()].isUndefined()) {
+                qCWarning(self) << "expected" << property.name() << "for" << targetType.name() << "in" << value;
+                continue;
+            }
+
+            auto propertyValue = deserialize(value[property.name()], property.metaType());
+
+            if (!propertyValue.isValid()) {
+                qCWarning(self) << "failed to deserialize property!";
+                continue;
+            }
+
+            // if (!propertyValue.convert(property.metaType())) {
+            // qCWarning(self) << "failed to convert property" << propertyValue.metaType().name() << "to" << property.metaType().name();
+            // }
+
+            qCDebug(self) << "set property" << QString{property.name()} << QString{property.metaType().name()}
+                          << QString{propertyValue.metaType().name()} << propertyValue;
+
+            if (!property.write(object, propertyValue)) {
+                qCWarning(self) << "failed to write" << QString{property.name()} << "on" << object;
+            }
+        }
+
+        return QVariant::fromValue(object);
+    }
+
+    if (value.isArray() && false) {
         const auto array = value.toArray();
 
-        for (auto const &value : array)
-            list.append(deserialize(value));
+        QVariantList list;
+        list.reserve(array.size());
 
-        return list;
+        for (auto const &element : array) {
+            auto deserializedElement = deserialize(element);
+            list.append(deserializedElement);
+        }
+
+        return QVariant::fromValue(list);
     }
 
     auto variant = value.toVariant();

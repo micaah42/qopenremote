@@ -1,3 +1,5 @@
+#include <QJsonArray>
+#include <QJsonObject>
 #include <QtTest/QTest>
 
 #include "json.h"
@@ -10,6 +12,13 @@ class A : public QObject
     Q_PROPERTY(QList<int> numbers READ numbers WRITE setNumbers NOTIFY numbersChanged FINAL)
 
 public:
+    Q_INVOKABLE explicit A(QObject *parent = nullptr)
+        : QObject{parent}
+        , m_integer{0}
+        , m_string{}
+        , m_numbers{}
+    {}
+
     int integer() const { return m_integer; }
     void setInteger(int newInteger)
     {
@@ -55,6 +64,11 @@ class B : public QObject
     Q_PROPERTY(QList<A *> as READ as WRITE setAs NOTIFY asChanged FINAL)
 
 public:
+    Q_INVOKABLE explicit B(QObject *parent = nullptr)
+        : QObject{parent}
+        , m_a{nullptr}
+    {}
+
     A *a() const { return m_a; }
     void setA(A *newA)
     {
@@ -124,6 +138,106 @@ private slots:
             auto recovered = JSON::deserialize<QTime>(serialized);
             QCOMPARE(recovered, time);
         }
+    }
+
+    void testSimpleQObject()
+    {
+        A obj;
+        obj.setInteger(42);
+        obj.setString("Hello World");
+        obj.setNumbers({1, 2, 3, 4, 5});
+
+        QJsonObject serialized = JSON::serialize(&obj).toObject();
+        
+        // Verify individual fields
+        QCOMPARE(serialized["integer"].toInt(), 42);
+        QCOMPARE(serialized["string"].toString(), QString("Hello World"));
+        QCOMPARE(serialized["numbers"].toArray(), QJsonArray({1, 2, 3, 4, 5}));
+
+        // Test Deserialization
+        auto *recovered = JSON::deserialize<A*>(serialized);
+        QVERIFY(recovered != nullptr);
+        QCOMPARE(recovered->integer(), obj.integer());
+        QCOMPARE(recovered->string(), obj.string());
+        QCOMPARE(recovered->numbers(), obj.numbers());
+        
+        recovered->deleteLater();
+    }
+
+    void testNestedQObject()
+    {
+        B root;
+        A *child = new A();
+        child->setInteger(100);
+        child->setString("Nested Object");
+        
+        root.setA(child);
+
+        QJsonObject serialized = JSON::serialize(&root).toObject();
+        
+        
+        QVERIFY(serialized.contains("a"));
+        QJsonObject childJson = serialized["a"].toObject();
+        QCOMPARE(childJson["integer"].toInt(), 100);
+
+        
+        auto *recoveredB = JSON::deserialize<B*>(serialized);
+        QVERIFY(recoveredB->a() != nullptr);
+        QCOMPARE(recoveredB->a()->integer(), 100);
+        QCOMPARE(recoveredB->a()->string(), QString("Nested Object"));
+
+        // Cleanup
+        delete recoveredB->a();
+        delete recoveredB;
+        delete child;
+    }
+
+    void testQObjectList()
+    {
+        B root;
+        A *a1 = new A();
+        a1->setInteger(1);
+
+        A *a2 = new A();
+        a2->setInteger(2);
+
+        root.setAs({a1, a2});
+
+        QJsonObject serialized = JSON::serialize(&root).toObject();
+        qInfo() << "serialized:" << serialized;
+        QJsonArray array = serialized["as"].toArray();
+        
+        QCOMPARE(array.size(), 2);
+        QCOMPARE(array.at(0).toObject()["integer"].toInt(), 1);
+        QCOMPARE(array.at(1).toObject()["integer"].toInt(), 2);
+
+        // Deserialization check
+        auto *recoveredB = JSON::deserialize<B*>(serialized);
+        QCOMPARE(recoveredB->as().size(), 2);
+        QCOMPARE(recoveredB->as().at(0)->integer(), 1);
+        
+        // Cleanup logic (assuming the list owns the pointers or you manual clean)
+        qDeleteAll(recoveredB->as());
+        delete recoveredB;
+        delete a1;
+        delete a2;
+    }
+
+    void testNullPointers()
+    {
+        B root;
+        root.setA(nullptr); // Ensure m_a is null
+
+        QJsonObject serialized = JSON::serialize(&root).toObject();
+        
+        // Depending on your library implementation, 
+        // null pointers should likely be QJsonValue::Null
+        QVERIFY(serialized["a"].isNull());
+
+        auto *recovered = JSON::deserialize<B*>(serialized);
+        QVERIFY(recovered->a() == nullptr);
+        
+        delete recovered;
     }
 };
 

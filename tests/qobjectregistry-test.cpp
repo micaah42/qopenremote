@@ -120,8 +120,8 @@ private slots:
         QCOMPARE(registry.get("b.a.string").toString(), "rocks!");
 
         b.setA(nullptr);
-        QCOMPARE(registry.get("b.a"), QVariant());
-        QCOMPARE(registry.get("b.a.string"), QVariant());
+        QCOMPARE(registry.get("b.a"), QVariant::fromValue(&a));
+        QCOMPARE(registry.get("b.a.string"), a.string());
     }
 
     void simpleListRead()
