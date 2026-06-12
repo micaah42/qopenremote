@@ -33,8 +33,7 @@ void qDeleteAll(const QList<T> &list)
 class ListModelBase : public QAbstractListModel
 {
     Q_OBJECT
-    QML_ELEMENT
-    
+
     Q_PROPERTY(int length READ length NOTIFY lengthChanged FINAL)
     Q_PROPERTY(QVariantList asList READ asList WRITE setAsList NOTIFY asListChanged FINAL)
 
