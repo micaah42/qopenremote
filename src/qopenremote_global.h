@@ -9,4 +9,6 @@
 #define QOPENREMOTE_EXPORT Q_DECL_IMPORT
 #endif
 
+#include <QtQml/QQmlEngine>
+
 #endif
