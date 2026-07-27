@@ -8,8 +8,10 @@
 #include <QMetaProperty>
 #include <QSequentialIterable>
 
+#include "listmodel.h"
+
 namespace {
-Q_LOGGING_CATEGORY(self, "JSON", QtInfoMsg)
+Q_LOGGING_CATEGORY(self, "json", QtWarningMsg)
 }
 
 QHash<int, JSON::Serializer> JSON::_serializers = {
@@ -57,14 +59,18 @@ QHash<int, JSON::Serializer> JSON::_serializers = {
 
 QByteArray JSON::stringify(const QVariant &variant)
 {
+    qCDebug(self) << "stringifying variant of type" << variant.typeName();
     auto value = serialize(variant);
 
     switch (value.type()) {
     case QJsonValue::Object:
+        qCDebug(self) << "serialized to QJsonObject";
         return QJsonDocument{value.toObject()}.toJson();
     case QJsonValue::Array:
+        qCDebug(self) << "serialized to QJsonArray";
         return QJsonDocument{value.toArray()}.toJson();
     default:
+        qCWarning(self) << "serialized to unexpected type:" << value.type() << value;
         return "";
     }
 }
@@ -83,7 +89,7 @@ QVariant JSON::parse(const QByteArray &json, const QMetaType &type)
     return deserialize(value);
 }
 
-QJsonValue JSON::serialize(const QVariant &variant)
+QJsonValue JSON::serialize(const QVariant &variant, const VisitedObjects &visitedObjects)
 {
 #if QT_VERSION_MAJOR == 5
     auto metaType = QMetaType{variant.userType()};
@@ -93,46 +99,66 @@ QJsonValue JSON::serialize(const QVariant &variant)
     auto typeId = variant.typeId();
 #endif
 
-    if (variant.isNull())
-        return QJsonValue::Null;
+    qCDebug(self) << "serializing variant of type" << metaType.name() << "(" << typeId << ")";
 
-    if (!variant.isValid())
+    if (variant.isNull()) {
+        qCDebug(self) << "variant is null";
+        return QJsonValue::Null;
+    }
+
+    if (!variant.isValid()) {
+        qCWarning(self) << "variant is invalid";
         return QJsonValue::Undefined;
+    }
 
     auto serializer = _serializers.find(typeId);
-
-    if (serializer != _serializers.end())
+    if (serializer != _serializers.end()) {
+        qCDebug(self) << "using custom serializer for type" << metaType.name();
         return serializer->serialize(variant);
+    }
 
     if (metaType.flags().testFlag(QMetaType::PointerToQObject)) {
         auto metaObject = metaType.metaObject();
+        qCDebug(self) << "serializing QObject:" << metaObject->className();
+
+        if (visitedObjects->contains(variant.value<QObject *>())) {
+            qCCritical(self) << "circular serialization detected:" << variant;
+            return QJsonValue::Null;
+        }
+
+        visitedObjects->insert(variant.value<QObject *>());
 
         QJsonObject object{{"__typeId", variant.typeId()}, {"__typeName", metaType.name()}};
         for (auto i = 0; i < metaObject->propertyCount(); ++i) {
             auto property = metaObject->property(i);
-            object[property.name()] = serialize(property.read(variant.value<QObject *>()));
+            qCDebug(self) << "serializing QObject property:" << property.name() << property.metaType().name();
+            object[property.name()] = serialize(property.read(variant.value<QObject *>()), visitedObjects);
         }
         return object;
     }
 
     if (metaType.flags().testFlag(QMetaType::PointerToGadget)) {
         auto metaObject = metaType.metaObject();
+        qCDebug(self) << "serializing Gadget:" << metaObject->className();
 
         QJsonObject object{{"__typeId", variant.typeId()}, {"__typeName", metaType.name()}};
         for (auto i = 0; i < metaObject->propertyCount(); ++i) {
             auto property = metaObject->property(i);
-            object[property.name()] = serialize(property.readOnGadget(variant.constData()));
+            qCDebug(self) << "serializing Gadget property:" << property.name() << property.metaType().name();
+            object[property.name()] = serialize(property.readOnGadget(variant.constData()), visitedObjects);
         }
         return object;
     }
 
     else if (variant.canConvert<QVariantList>() && typeId != QMetaType::QString) {
         QJsonArray array;
+        qCDebug(self) << "serializing QVariantList with" << variant.value<QVariantList>().size() << "elements";
         const auto list = variant.value<QVariantList>();
         for (const auto &x : std::as_const(list))
-            array.append(serialize(x));
+            array.append(serialize(x, visitedObjects));
         return array;
     }
+    qCDebug(self) << "using default toJsonValue conversion for type" << metaType.name();
 
     return variant.toJsonValue();
 }
@@ -146,7 +172,7 @@ QVariant JSON::deserialize(const QJsonValue &value, const QMetaType &type)
 
         auto typeName = value["__typeName"].toString().toUtf8();
         targetType = QMetaType::fromName(typeName);
-        qCDebug(self) << "loaded from __typeName" << targetType;
+        qCDebug(self) << "loaded from __typeName:" << targetType;
     }
 
     if (!targetType.isValid()) {
@@ -175,6 +201,9 @@ QVariant JSON::deserialize(const QJsonValue &value, const QMetaType &type)
         auto metaObject = targetType.metaObject();
         QObject *object = metaObject->newInstance();
 
+        //  if (metaObject->inherits(QMetaType::fromType<ListModelBase>().metaObject())) {
+        //  };
+
         if (object == nullptr) {
             qCCritical(self) << "failed to create object:" << metaObject->className();
             return QVariant(targetType);
@@ -184,6 +213,11 @@ QVariant JSON::deserialize(const QJsonValue &value, const QMetaType &type)
 
         for (auto i = 0; i < metaObject->propertyCount(); ++i) {
             auto property = metaObject->property(i);
+
+            if (!property.isWritable()) {
+                qCDebug(self) << "cannot write to property:" << property.name();
+                continue;
+            }
 
             if (value[property.name()].isUndefined()) {
                 qCWarning(self) << "expected" << property.name() << "for" << targetType.name() << "in" << value;
@@ -197,12 +231,11 @@ QVariant JSON::deserialize(const QJsonValue &value, const QMetaType &type)
                 continue;
             }
 
-            // if (!propertyValue.convert(property.metaType())) {
-            // qCWarning(self) << "failed to convert property" << propertyValue.metaType().name() << "to" << property.metaType().name();
-            // }
-
-            qCDebug(self) << "set property" << QString{property.name()} << QString{property.metaType().name()}
-                          << QString{propertyValue.metaType().name()} << propertyValue;
+            qCDebug(self)                                         //@
+                << "setting property" << QString{property.name()} //@
+                << QString{property.metaType().name()}            //@
+                << QString{propertyValue.metaType().name()}       //@
+                << propertyValue;
 
             if (!property.write(object, propertyValue)) {
                 qCWarning(self) << "failed to write" << QString{property.name()} << "on" << object;
@@ -212,7 +245,7 @@ QVariant JSON::deserialize(const QJsonValue &value, const QMetaType &type)
         return QVariant::fromValue(object);
     }
 
-    if (value.isArray() && false) {
+    else if (value.isArray()) {
         const auto array = value.toArray();
 
         QVariantList list;

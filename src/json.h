@@ -6,6 +6,8 @@
 
 class JSON
 {
+    using VisitedObjects = QSharedPointer<QSet<QObject *>>;
+
 public:
     template<class T>
     static QByteArray stringify(const T &t);
@@ -17,7 +19,7 @@ public:
 
     template<class T>
     static QJsonValue serialize(const T &t);
-    static QJsonValue serialize(const QVariant &variant);
+    static QJsonValue serialize(const QVariant &variant, const VisitedObjects &visitedObjects = VisitedObjects::create());
 
     template<class T>
     static T deserialize(const QJsonValue &value);
