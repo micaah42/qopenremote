@@ -59,6 +59,9 @@ public:
     bool operator==(const T &t);
     void operator=(const T &t);
 
+    const T operator->() const;
+    T operator->();
+
 private:
     QSettings &_settings;
     const QString _key;
@@ -91,6 +94,17 @@ inline void Setting<T>::operator=(const T &t)
 {
     _settings.setValue(_key, QVariant::fromValue(t));
     _value = t;
+}
+
+template<class T>
+inline T Setting<T>::operator->()
+{
+    return _value;
+}
+template<class T>
+inline const T Setting<T>::operator->() const
+{
+    return _value;
 }
 
 template<class T>

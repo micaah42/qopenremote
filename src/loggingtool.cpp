@@ -1,5 +1,7 @@
 #include "loggingtool.h"
 
+#include <QCoreApplication>
+#include <QThread>
 #include <iostream>
 
 LoggingTool *LoggingTool::sLoggingTool = nullptr;
@@ -36,7 +38,7 @@ void LoggingTool::handleMessage(QtMsgType type, const QMessageLogContext &contex
     newRecord->setCategory(context.category);
     newRecord->setMessage(message);
     newRecord->setLine(line);
-
+    newRecord->moveToThread(QCoreApplication::instance()->thread());
     _records->append(newRecord);
 
     if (_records->length() >= _limit)
