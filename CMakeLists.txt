@@ -40,7 +40,7 @@ add_library(${PROJECT_NAME} SHARED
     src/enumutil.h
     src/loggingtool.cpp
     src/loggingtool.h
-    src/loggingtool.h src/loggingtool.cpp
+    src/deletionutils.h
 )
 
 target_link_libraries(qopenremote PRIVATE Qt6::Core)

@@ -23,13 +23,6 @@ const QList<T> qFromVariantList(const QVariantList &variants)
     return list;
 }
 
-template<class T>
-void qDeleteAll(const QList<T> &list)
-{
-    for (auto const &v : std::as_const(list))
-        v->deleteLater();
-}
-
 class ListModelBase : public QAbstractListModel
 {
     Q_OBJECT
