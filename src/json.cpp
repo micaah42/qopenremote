@@ -6,9 +6,8 @@
 #include <QJsonObject>
 #include <QLoggingCategory>
 #include <QMetaProperty>
+#include <QMetaType>
 #include <QSequentialIterable>
-
-#include "listmodel.h"
 
 namespace {
 Q_LOGGING_CATEGORY(self, "json", QtWarningMsg)
@@ -172,7 +171,7 @@ QVariant JSON::deserialize(const QJsonValue &value, const QMetaType &type)
 
         auto typeName = value["__typeName"].toString().toUtf8();
         targetType = QMetaType::fromName(typeName);
-        qCDebug(self) << "loaded from __typeName:" << targetType;
+        qCDebug(self) << "loaded from __typeName:" << targetType.name();
     }
 
     if (!targetType.isValid()) {
@@ -186,7 +185,7 @@ QVariant JSON::deserialize(const QJsonValue &value, const QMetaType &type)
         return variant;
     }
 
-    qCDebug(self) << "trying to deserialize" << value << "into" << type;
+    qCDebug(self) << "trying to deserialize" << value << "into" << (type.isValid() ? type.name() : "<invalid>");
 
     auto serializer = _serializers.find(targetType.id());
     if (serializer != _serializers.end())
@@ -194,7 +193,8 @@ QVariant JSON::deserialize(const QJsonValue &value, const QMetaType &type)
 
     if (targetType.flags().testFlag(QMetaType::PointerToQObject)) {
         if (!value.isObject()) {
-            qCWarning(self) << "value should deserialize into a pointer to object but is not an object" << targetType << targetType.flags();
+            qCWarning(self) << "value should deserialize into a pointer to object but is not an object"
+                            << targetType.name() << targetType.flags().testFlag(QMetaType::PointerToQObject);
             return QVariant(targetType);
         }
 
@@ -209,7 +209,7 @@ QVariant JSON::deserialize(const QJsonValue &value, const QMetaType &type)
             return QVariant(targetType);
         }
 
-        qCDebug(self) << "created" << targetType << object;
+        qCDebug(self) << "created" << targetType.name() << object;
 
         for (auto i = 0; i < metaObject->propertyCount(); ++i) {
             auto property = metaObject->property(i);
