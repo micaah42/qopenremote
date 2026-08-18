@@ -59,8 +59,8 @@ public:
     bool operator==(const T &t);
     void operator=(const T &t);
 
-    const T operator->() const;
-    T operator->();
+    const T *operator->() const;
+    T *operator->();
 
 private:
     QSettings &_settings;
@@ -97,12 +97,12 @@ inline void Setting<T>::operator=(const T &t)
 }
 
 template<class T>
-inline T Setting<T>::operator->()
+inline T *Setting<T>::operator->()
 {
     return _value;
 }
 template<class T>
-inline const T Setting<T>::operator->() const
+inline const T *Setting<T>::operator->() const
 {
     return _value;
 }
