@@ -73,6 +73,6 @@ install(TARGETS ${PROJECT_NAME}
 
 include(CTest)
 
-if (BUILD_TESTING)
+if (BUILD_TESTING AND CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
     add_subdirectory(tests)
 endif()
