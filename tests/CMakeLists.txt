@@ -1,16 +1,18 @@
 cmake_minimum_required(VERSION 3.22)
 
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Test)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Test)
+find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Quick QuickControls2 Test)
+find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Quick QuickControls2 Test)
 
 enable_testing(true)
 
 function(qopenremote_add_test TEST_NAME)
     add_executable(${TEST_NAME} ${TEST_NAME}.cpp)
     add_test(NAME ${TEST_NAME} COMMAND ${TEST_NAME})
-    target_link_libraries(${TEST_NAME} PRIVATE Qt::Test qopenremote)
+    target_link_libraries(${TEST_NAME} PRIVATE Qt::Test Qt::Quick Qt::QuickControls2 qopenremote)
+    target_compile_definitions(${TEST_NAME} PRIVATE QOPENREMOTE_TESTS_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 endfunction()
 
 qopenremote_add_test(qobjectregistry-test)
 qopenremote_add_test(json-test)
+qopenremote_add_test(quicktestengine-test)
 

@@ -72,7 +72,8 @@ install(TARGETS ${PROJECT_NAME}
 )
 
 include(CTest)
+option(QOPENREMOTE_BUILD_TESTING "Force building qopenremote test even as a subproject" OFF)
 
-if (BUILD_TESTING AND CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME)
+if (BUILD_TESTING AND (CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME OR QOPENREMOTE_BUILD_TESTING))
     add_subdirectory(tests)
 endif()
