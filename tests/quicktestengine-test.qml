@@ -79,4 +79,19 @@ Window {
             }
         }
     }
+
+    Item {
+        id: _clickTarget
+        anchors.right: parent.right
+        objectName: "clickTarget"
+        width: 50
+        height: 50
+        property int clickCount: 0
+
+        Button {
+            id: _mouseArea
+            anchors.fill: parent
+            onClicked: _clickTarget.clickCount++
+        }
+    }
 }

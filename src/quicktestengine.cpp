@@ -1,15 +1,19 @@
 #include "quicktestengine.h"
 
 #include <QBuffer>
+#include <QElapsedTimer>
 #include <QGuiApplication>
 #include <QImage>
 #include <QLoggingCategory>
 #include <QMetaObject>
+#include <QMouseEvent>
+#include <QPromise>
 #include <QQmlContext>
 #include <QQuickWindow>
+#include <QTimer>
 
 namespace {
-Q_LOGGING_CATEGORY(self, "quicktestengine", QtWarningMsg)
+Q_LOGGING_CATEGORY(self, "quicktestengine") //, QtWarningMsg)
 }
 
 QDebug operator<<(QDebug debug, const QuickTestEngine::PathPart &pathPart)
@@ -216,6 +220,66 @@ bool QuickTestEngine::isMatching(QObject *object, const PathPart &pathPart)
     if (context)
         if (!pathPart.id.isEmpty() && context->nameForObject(object) != pathPart.id)
             return false;
+
+    return true;
+}
+
+QFuture<QVariant> QuickTestEngine::findAwait(const QList<PathPart> &path, int timeout)
+{
+    auto promise = std::make_shared<QPromise<QVariant>>();
+    promise->start();
+    auto future = promise->future();
+
+    auto elapsed = std::make_shared<QElapsedTimer>();
+    elapsed->start();
+
+    auto timer = std::make_shared<QTimer>();
+    timer->setInterval(16);
+
+    connect(timer.get(), &QTimer::timeout, this, [this, path, timeout, promise, elapsed, timer]() {
+        auto result = find(path);
+        if (!result.isValid() && !elapsed->hasExpired(timeout))
+            return;
+
+        promise->addResult(result);
+        promise->finish();
+        timer->stop();
+    });
+    timer->start();
+
+    return future;
+}
+
+bool QuickTestEngine::click(const QList<PathPart> &path)
+{
+    auto variant = find(path);
+    if (!variant.canConvert<QObject *>()) {
+        qCCritical(self) << "click: path did not resolve to an object:" << path;
+        return false;
+    }
+
+    auto item = qobject_cast<QQuickItem *>(variant.value<QObject *>());
+    if (!item) {
+        qCCritical(self) << "click: resolved object is not a QQuickItem:" << path;
+        return false;
+    }
+
+    auto window = item->window();
+    if (!window) {
+        qCCritical(self) << "click: item has no window:" << path;
+        return false;
+    }
+
+    const auto center = item->mapToScene(QPointF(item->width() / 2, item->height() / 2));
+    const auto screenPos = window->mapToGlobal(center.toPoint());
+
+    qCDebug(self) << center << screenPos;
+
+    auto pressEvent = new QMouseEvent(QEvent::MouseButtonPress, center, screenPos, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    QGuiApplication::postEvent(window, pressEvent);
+
+    auto releaseEvent = new QMouseEvent(QEvent::MouseButtonRelease, center, screenPos, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    QGuiApplication::postEvent(window, releaseEvent);
 
     return true;
 }

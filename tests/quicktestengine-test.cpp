@@ -75,6 +75,65 @@ private slots:
         QVERIFY(!engine.find({}).isValid());
     }
 
+    void clickInvokesMouseAreaOnQmlItem()
+    {
+        QQmlApplicationEngine engine;
+        engine.load(QUrl::fromLocalFile(QOPENREMOTE_TESTS_DIR "/quicktestengine-test.qml"));
+        QVERIFY(!engine.rootObjects().isEmpty());
+
+        auto window = qobject_cast<QQuickWindow *>(engine.rootObjects().first());
+        QVERIFY(window);
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+
+        QList<QuickTestEngine::PathPart> path{
+            {.id = "_window"},
+            {.objectName = "clickTarget"},
+            {.id = "_mouseArea"},
+        };
+
+        QuickTestEngine testEngine;
+        auto item = qobject_cast<QQuickItem *>(testEngine.find(path).value<QObject *>());
+        QVERIFY(item);
+        QTest::qWait(100);
+
+        QVERIFY(testEngine.click(path));
+        QTest::qWait(100);
+
+        QList<QuickTestEngine::PathPart> path1{
+            {.id = "_window"},
+            {.objectName = "clickTarget"},
+            {.propertyName = "clickCount"},
+        };
+
+        QTRY_COMPARE(testEngine.find(path1).toInt(), 1);
+    }
+
+    void clickReturnsFalseForInvalidPath()
+    {
+        QuickTestEngine engine;
+        QVERIFY(!engine.click({}));
+    }
+
+    void clickReturnsFalseWhenResolvedObjectIsNotAnItem()
+    {
+        QQmlApplicationEngine engine;
+        engine.load(QUrl::fromLocalFile(QOPENREMOTE_TESTS_DIR "/quicktestengine-test.qml"));
+        QVERIFY(!engine.rootObjects().isEmpty());
+
+        auto window = qobject_cast<QQuickWindow *>(engine.rootObjects().first());
+        QVERIFY(window);
+        QVERIFY(QTest::qWaitForWindowExposed(window));
+
+        QList<QuickTestEngine::PathPart> path{
+            {.id = "_window"},
+            {.id = "_target"},
+            {.propertyName = "answer"},
+        };
+
+        QuickTestEngine testEngine;
+        QVERIFY(!testEngine.click(path));
+    }
+
     void findWorksWithQmlLoadedWindow()
     {
         QQmlApplicationEngine engine;
