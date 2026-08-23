@@ -1,15 +1,18 @@
 #include <QJsonArray>
 #include <QJsonObject>
+#include <QQmlApplicationEngine>
+#include <QQmlEngine>
 #include <QtTest/QTest>
 
-#include "json.h"
+#include <json.h>
+#include <variantutils.h>
 
 class A : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(int integer READ integer WRITE setInteger NOTIFY integerChanged FINAL)
     Q_PROPERTY(QString string READ string WRITE setString NOTIFY stringChanged FINAL)
-    Q_PROPERTY(QList<int> numbers READ numbers WRITE setNumbers NOTIFY numbersChanged FINAL)
+    Q_PROPERTY(QVariantList numbers READ numbers WRITE setNumbers NOTIFY numbersChanged FINAL)
 
 public:
     Q_INVOKABLE explicit A(QObject *parent = nullptr)
@@ -37,8 +40,8 @@ public:
         emit stringChanged();
     }
 
-    QList<int> numbers() const { return m_numbers; }
-    void setNumbers(const QList<int> &newNumbers)
+    QVariantList numbers() const { return m_numbers; }
+    void setNumbers(const QVariantList &newNumbers)
     {
         if (m_numbers == newNumbers)
             return;
@@ -54,14 +57,14 @@ signals:
 private:
     int m_integer;
     QString m_string;
-    QList<int> m_numbers;
+    QVariantList m_numbers;
 };
 
 class B : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(A *a READ a WRITE setA NOTIFY aChanged FINAL)
-    Q_PROPERTY(QList<A *> as READ as WRITE setAs NOTIFY asChanged FINAL)
+    Q_PROPERTY(QVariantList as READ as WRITE setAs NOTIFY asChanged FINAL)
 
 public:
     Q_INVOKABLE explicit B(QObject *parent = nullptr)
@@ -78,8 +81,8 @@ public:
         emit aChanged();
     }
 
-    const QList<A *> &as() const { return m_as; }
-    void setAs(const QList<A *> &newA)
+    const QVariantList &as() const { return m_as; }
+    void setAs(const QVariantList &newA)
     {
         if (m_as == newA)
             return;
@@ -93,7 +96,7 @@ signals:
 
 private:
     A *m_a = nullptr;
-    QList<A *> m_as;
+    QVariantList m_as;
 };
 
 class JSONTest : public QObject
@@ -101,6 +104,8 @@ class JSONTest : public QObject
     Q_OBJECT
 
 private slots:
+    void init() {}
+
     void testSpecialTypes()
     {
         // Valid QDateTime
@@ -201,7 +206,7 @@ private slots:
         A *a2 = new A();
         a2->setInteger(2);
 
-        root.setAs({a1, a2});
+        root.setAs({QVariant::fromValue(a1), QVariant::fromValue(a2)});
 
         QJsonObject serialized = JSON::serialize(&root).toObject();
         qInfo() << "serialized:" << serialized;
@@ -214,10 +219,10 @@ private slots:
         // Deserialization check
         auto *recoveredB = JSON::deserialize<B*>(serialized);
         QCOMPARE(recoveredB->as().size(), 2);
-        QCOMPARE(recoveredB->as().at(0)->integer(), 1);
-        
+        QCOMPARE(recoveredB->as().at(0).value<A *>()->integer(), 1);
+
         // Cleanup logic (assuming the list owns the pointers or you manual clean)
-        qDeleteAll(recoveredB->as());
+        qDeleteAll(variantList2Typed<A *>(recoveredB->as()));
         delete recoveredB;
         delete a1;
         delete a2;

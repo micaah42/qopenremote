@@ -237,11 +237,14 @@ QVariant JSON::deserialize(const QJsonValue &value, const QMetaType &type)
                 << QString{propertyValue.metaType().name()}       //@
                 << propertyValue;
 
-            if (!property.write(object, propertyValue)) {
-                qCWarning(self) << "failed to write" << QString{property.name()} << "on" << object;
-            }
-        }
+            //if (!property.write(object, propertyValue))
+            //    qCWarning(self) << "failed to write" << QString{property.name()} << "on" << object;
 
+            if (!object->setProperty(property.name(), propertyValue))
+                qCWarning(self) << "failed to write" << QString{property.name()} << "on" << object;
+        }
+        // return QVariant(targetType, object);
+        // return QVariant::fromMetaType(targetType, object);
         return QVariant::fromValue(object);
     }
 
@@ -256,7 +259,13 @@ QVariant JSON::deserialize(const QJsonValue &value, const QMetaType &type)
             list.append(deserializedElement);
         }
 
-        return QVariant::fromValue(list);
+        auto listVariant = QVariant::fromValue(list);
+
+        // if (targetType.isValid())
+        // if (!listVariant.convert(targetType))
+        // qCWarning(self) << "failed to convert" << list << "to" << targetType;
+
+        return list;
     }
 
     auto variant = value.toVariant();

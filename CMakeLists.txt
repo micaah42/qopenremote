@@ -41,6 +41,8 @@ add_library(${PROJECT_NAME} SHARED
     src/loggingtool.cpp
     src/loggingtool.h
     src/deletionutils.h
+    src/variantutils.cpp
+    src/variantutils.h
 )
 
 target_link_libraries(qopenremote PRIVATE Qt6::Core)
