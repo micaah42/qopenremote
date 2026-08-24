@@ -43,6 +43,8 @@ add_library(${PROJECT_NAME} SHARED
     src/deletionutils.h
     src/variantutils.cpp
     src/variantutils.h
+    src/objectregistry2.cpp
+    src/objectregistry2.h 
 )
 
 target_link_libraries(qopenremote PRIVATE Qt6::Core)

@@ -1,5 +1,8 @@
 #include <QtTest/QTest>
 
+#include <QLoggingCategory>
+
+#include "objectregistry2.h"
 #include "qobjectregistry.h"
 
 class A : public QObject
@@ -91,14 +94,16 @@ class QObjectRegistryTest : public QObject
     Q_OBJECT
 
 private slots:
+    void init() { QLoggingCategory::setFilterRules("registry.*=true"); }
+
     void simpleRead()
     {
-        QObjectRegistry registry{};
+        ObjectRegistry2 registry{};
 
         A a{};
         a.setInteger(2112);
         a.setString("rocks!");
-        registry.registerObject("a", &a);
+        registry.registerValue("a", &a);
 
         QCOMPARE(registry.get("a.integer").toInt(), 2112);
         QCOMPARE(registry.get("a.string").toString(), "rocks!");
@@ -106,7 +111,7 @@ private slots:
 
     void recursiveRead()
     {
-        QObjectRegistry registry{};
+        ObjectRegistry2 registry{};
 
         A a{};
         a.setInteger(2112);
@@ -114,22 +119,22 @@ private slots:
 
         B b{};
         b.setA(&a);
-        registry.registerObject("b", &b);
+        registry.registerValue("b", &b);
 
         QCOMPARE(registry.get("b.a.integer").toInt(), 2112);
         QCOMPARE(registry.get("b.a.string").toString(), "rocks!");
 
         b.setA(nullptr);
-        QCOMPARE(registry.get("b.a"), QVariant::fromValue(&a));
-        QCOMPARE(registry.get("b.a.string"), a.string());
+        QCOMPARE(registry.get("b.a"), QVariant(QMetaType::fromType<A *>()));
+        QCOMPARE(registry.get("b.a.string"), QVariant());
     }
 
     void simpleListRead()
     {
-        QObjectRegistry registry{};
+        ObjectRegistry2 registry{};
 
         A a{};
-        registry.registerObject("a", &a);
+        registry.registerValue("a", &a);
         QCOMPARE(registry.get("a").toList(), {});
 
         a.setNumbers({2, 1, 1, 2});
@@ -139,7 +144,7 @@ private slots:
 
     void objectListRead()
     {
-        QObjectRegistry registry{};
+        ObjectRegistry2 registry{};
 
         A a1{};
         a1.setString("i am 1");
@@ -155,7 +160,7 @@ private slots:
 
         B b{};
         b.setAs({&a1, &a2, &a3});
-        registry.registerObject("b", &b);
+        registry.registerValue("b", &b);
 
         QCOMPARE(registry.get("b.as.0.string"), "i am 1");
         QCOMPARE(registry.get("b.as.0.integer"), 1);
