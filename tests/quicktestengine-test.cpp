@@ -81,8 +81,12 @@ private slots:
         engine.load(QUrl::fromLocalFile(QOPENREMOTE_TESTS_DIR "/quicktestengine-test.qml"));
         QVERIFY(!engine.rootObjects().isEmpty());
 
-        auto window = qobject_cast<QQuickWindow *>(engine.rootObjects().first());
+        auto objects = engine.rootObjects();
+        QVERIFY(!objects.empty());
+
+        auto window = qobject_cast<QQuickWindow *>(objects.first());
         QVERIFY(window);
+
         QVERIFY(QTest::qWaitForWindowExposed(window));
 
         QList<QuickTestEngine::PathPart> path{
@@ -105,7 +109,7 @@ private slots:
             {.propertyName = "clickCount"},
         };
 
-        QTRY_COMPARE(testEngine.find(path1).toInt(), 1);
+        QCOMPARE(testEngine.find(path1).toInt(), 1);
     }
 
     void clickReturnsFalseForInvalidPath()
