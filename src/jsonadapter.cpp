@@ -11,11 +11,11 @@ namespace {
 Q_LOGGING_CATEGORY(self, "adapter.json", QtWarningMsg)
 }
 
-JSONAdapter::JSONAdapter(QObjectRegistry &registry, QObject *parent)
+JSONAdapter::JSONAdapter(ObjectRegistry2 &registry, QObject *parent)
     : QObject{parent}
     , _registry{registry}
 {
-    connect(&registry, &QObjectRegistry::valueChanged, this, &JSONAdapter::onValueChanged);
+    connect(&registry, &ObjectRegistry2::valueChanged, this, &JSONAdapter::onValueChanged);
 }
 
 void JSONAdapter::handleMessage(const QByteArray &message)

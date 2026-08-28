@@ -8,15 +8,15 @@ namespace {
 Q_LOGGING_CATEGORY(self, "registry", QtWarningMsg)
 }
 
-QObjectRegistry::QObjectRegistry(QObject *parent)
+QObjectRegistryOld::QObjectRegistryOld(QObject *parent)
     : QObject{parent}
 {
     // we need a the notifier slot meta method for our connect signatures
-    _notifierSlotIdx = QObjectRegistry::metaObject()->indexOfMethod("onNotifySignal()");
-    _notifierSlot = QObjectRegistry::metaObject()->method(_notifierSlotIdx);
+    _notifierSlotIdx = QObjectRegistryOld::metaObject()->indexOfMethod("onNotifySignal()");
+    _notifierSlot = QObjectRegistryOld::metaObject()->method(_notifierSlotIdx);
 }
 
-void QObjectRegistry::registerObject(const QString &name, const QVariant &variant)
+void QObjectRegistryOld::registerObject(const QString &name, const QVariant &variant)
 {
     // todo: check collisions etc
 
@@ -48,7 +48,7 @@ void QObjectRegistry::registerObject(const QString &name, const QVariant &varian
     }
 }
 
-void QObjectRegistry::deregisterObject(const QString &name)
+void QObjectRegistryOld::deregisterObject(const QString &name)
 {
     qCInfo(self) << "deregister object:" << name;
 
@@ -74,7 +74,7 @@ void QObjectRegistry::deregisterObject(const QString &name)
 #endif
 }
 
-void QObjectRegistry::deregisterObject(QObject *object)
+void QObjectRegistryOld::deregisterObject(QObject *object)
 {
     qCInfo(self) << "deregister object:" << object;
 
@@ -91,7 +91,7 @@ void QObjectRegistry::deregisterObject(QObject *object)
 #endif
 }
 
-QVariant QObjectRegistry::get(const QString &key)
+QVariant QObjectRegistryOld::get(const QString &key)
 {
     auto it = _get.find(key);
 
@@ -107,7 +107,7 @@ QVariant QObjectRegistry::get(const QString &key)
 #endif
 }
 
-void QObjectRegistry::set(const QString &key, const QVariant &value)
+void QObjectRegistryOld::set(const QString &key, const QVariant &value)
 {
     auto it = _set.find(key);
     //auto it = _properties.find(key);
@@ -125,12 +125,12 @@ void QObjectRegistry::set(const QString &key, const QVariant &value)
     (*it)(value);
 }
 
-QVariant QObjectRegistry::call(const QString &function, const QVariantList &arguments)
+QVariant QObjectRegistryOld::call(const QString &function, const QVariantList &arguments)
 {
     return {};
 }
 
-void QObjectRegistry::onNotifySignal()
+void QObjectRegistryOld::onNotifySignal()
 {
     auto notifyIt = _notify.find({sender(), senderSignalIndex()});
 
@@ -142,17 +142,17 @@ void QObjectRegistry::onNotifySignal()
     (*notifyIt)();
 }
 
-//const QMap<QString, QPair<QObject *, QMetaProperty> > &QObjectRegistry::properties() const
+//const QMap<QString, QPair<QObject *, QMetaProperty> > &QObjectRegistryOld::properties() const
 //{
 //    return _properties;
 //}
 
-const QMap<QString, QPair<QObject *, QMetaMethod> > &QObjectRegistry::methods() const
+const QMap<QString, QPair<QObject *, QMetaMethod> > &QObjectRegistryOld::methods() const
 {
     return _methods;
 }
 
-void QObjectRegistry::registerProperty(const QString &propertyName, QObject *object, const QMetaProperty &property)
+void QObjectRegistryOld::registerProperty(const QString &propertyName, QObject *object, const QMetaProperty &property)
 {
     qCInfo(self) << "register property:" << property.typeName() << propertyName;
 
@@ -269,7 +269,7 @@ void QObjectRegistry::registerProperty(const QString &propertyName, QObject *obj
     }
 }
 
-void QObjectRegistry::registerMethod(const QString &methodName, QObject *object, const QMetaMethod &method)
+void QObjectRegistryOld::registerMethod(const QString &methodName, QObject *object, const QMetaMethod &method)
 {
     if (method.access() != QMetaMethod::Public)
         return;

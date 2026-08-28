@@ -6,11 +6,11 @@
 #include <QMetaProperty>
 #include <QObject>
 
-class QObjectRegistry : public QObject
+class QObjectRegistryOld : public QObject
 {
     Q_OBJECT
 public:
-    explicit QObjectRegistry(QObject *parent = nullptr);
+    explicit QObjectRegistryOld(QObject *parent = nullptr);
 
     template<class T>
     void registerObject(const QString &name, T variant)

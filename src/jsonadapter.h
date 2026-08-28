@@ -3,13 +3,13 @@
 
 #include <QObject>
 
-#include "qobjectregistry.h"
+#include "objectregistry2.h"
 
 class JSONAdapter : public QObject
 {
     Q_OBJECT
 public:
-    explicit JSONAdapter(QObjectRegistry &registry, QObject *parent = nullptr);
+    explicit JSONAdapter(ObjectRegistry2 &registry, QObject *parent = nullptr);
     //static QJsonValue serialize(const QVariant &variant);
 
 public slots:
@@ -28,7 +28,7 @@ private slots:
 
 private:
     QMap<QString, int> _subscribed;
-    QObjectRegistry &_registry;
+    ObjectRegistry2 &_registry;
 };
 
 #endif // JSONADAPTER_H

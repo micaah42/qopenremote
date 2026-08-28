@@ -18,8 +18,8 @@ find_package(Qt6 REQUIRED COMPONENTS Core)
 add_library(${PROJECT_NAME} SHARED
     src/qopenremote_global.h
 
-    src/qobjectregistry.cpp
-    src/qobjectregistry.h
+    # src/qobjectregistry.cpp
+    # src/qobjectregistry.h
     src/websocketserver.cpp
     src/websocketserver.h
     src/jsonadapter.cpp
@@ -46,9 +46,6 @@ add_library(${PROJECT_NAME} SHARED
     src/objectregistry2.cpp
     src/objectregistry2.h 
 )
-
-target_link_libraries(qopenremote PRIVATE Qt6::Core)
-
 
 set_target_properties(${PROJECT_NAME} PROPERTIES SOVERSION ${PROJECT_VERSION})
 

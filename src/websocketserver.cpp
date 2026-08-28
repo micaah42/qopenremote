@@ -8,23 +8,23 @@ namespace {
 Q_LOGGING_CATEGORY(self, "server", QtWarningMsg)
 }
 
-WebSocketServer::WebSocketServer(QObjectRegistry &registry, QObject *parent)
+WebSocketServer::WebSocketServer(ObjectRegistry2 &registry, QObject *parent)
     : QObject{parent}
     , _registry{registry}
-    , _server{"talking-clock", QWebSocketServer::NonSecureMode}
+    , _server{new QWebSocketServer{"talking-clock", QWebSocketServer::NonSecureMode, this}}
 {
-    connect(&_server, &QWebSocketServer::newConnection, this, &WebSocketServer::onNewConnection);
+    connect(_server, &QWebSocketServer::newConnection, this, &WebSocketServer::onNewConnection);
 
-    if (!_server.listen(QHostAddress{"127.0.0.1"}, 21120))
-        qCCritical(self) << "failed to start websocket server:" << _server.errorString();
+    if (!_server->listen(QHostAddress{"127.0.0.1"}, 21120))
+        qCCritical(self) << "failed to start websocket server:" << _server->errorString();
 }
 
 void WebSocketServer::onNewConnection()
 {
-    if (!_server.hasPendingConnections())
+    if (!_server->hasPendingConnections())
         return;
 
-    auto socket = _server.nextPendingConnection();
+    auto socket = _server->nextPendingConnection();
     auto adapter = new JSONAdapter{_registry, socket};
     qCInfo(self) << "client connected" << socket;
 

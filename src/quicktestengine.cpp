@@ -1,5 +1,7 @@
 #include "quicktestengine.h"
 
+#include <iostream>
+
 #include <QBuffer>
 #include <QElapsedTimer>
 #include <QGuiApplication>
@@ -9,6 +11,7 @@
 #include <QMouseEvent>
 #include <QPromise>
 #include <QQmlContext>
+#include <QQuickItemGrabResult>
 #include <QQuickWindow>
 #include <QTimer>
 
@@ -16,6 +19,10 @@ namespace {
 Q_LOGGING_CATEGORY(self, "quicktestengine") //, QtWarningMsg)
 }
 
+/*!
+    Writes the QuickTestEngine::PathPart \a pathPart to the debug stream \a debug.
+    Used for displaying path specifications in debugging output.
+*/
 QDebug operator<<(QDebug debug, const QuickTestEngine::PathPart &pathPart)
 {
     QDebugStateSaver saver(debug);
@@ -31,6 +38,11 @@ QDebug operator<<(QDebug debug, const QuickTestEngine::PathPart &pathPart)
 
 QuickTestEngine::QuickTestEngine(QObject *parent)
     : QObject{parent}
+    , _eventLogging{false}
+    , _enabled{false}
+    , _address{"127.0.0.1"}
+    , _port{21129}
+    , _webSocketServer{_registry}
 {}
 
 bool forEachChild(QObject *object, const std::function<bool(QObject *)> &callback)
@@ -112,6 +124,15 @@ QVariant findIndexedChild(QObject *object, int index)
     return QVariant::fromValue(children.at(index));
 }
 
+/*!
+    Finds a QML object matching the specified path.
+    
+    Initiates a search starting from the top-level QML windows, matching each PathPart
+    sequentially to descend through the object hierarchy. Returns the matched object
+    as a QVariant, or an invalid QVariant if no match is found.
+    
+    \internal
+*/
 QVariant QuickTestEngine::find(const QList<PathPart> &path)
 {
     auto mutablePath = path;
@@ -250,7 +271,7 @@ QFuture<QVariant> QuickTestEngine::findAwait(const QList<PathPart> &path, int ti
     return future;
 }
 
-bool QuickTestEngine::click(const QList<PathPart> &path)
+bool QuickTestEngine::click(const QList<PathPart> &path, double relX, double relY)
 {
     auto variant = find(path);
     if (!variant.canConvert<QObject *>()) {
@@ -270,13 +291,76 @@ bool QuickTestEngine::click(const QList<PathPart> &path)
         return false;
     }
 
+    const QPointF localPos(item->width() * relX, item->height() * relY);
+    const auto scenePos = item->mapToScene(localPos);
+    const auto screenPos = window->mapToGlobal(scenePos.toPoint());
+
+    qCDebug(self) << scenePos << screenPos;
+
+    auto pressEvent = new QMouseEvent(QEvent::MouseButtonPress, scenePos, screenPos, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    QGuiApplication::postEvent(window, pressEvent);
+
+    auto releaseEvent = new QMouseEvent(QEvent::MouseButtonRelease, scenePos, screenPos, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    QGuiApplication::postEvent(window, releaseEvent);
+
+    return true;
+}
+
+bool QuickTestEngine::mousePress(const QList<PathPart> &path)
+{
+    auto variant = find(path);
+    if (!variant.canConvert<QObject *>()) {
+        qCCritical(self) << "mousePress: path did not resolve to an object:" << path;
+        return false;
+    }
+
+    auto item = qobject_cast<QQuickItem *>(variant.value<QObject *>());
+    if (!item) {
+        qCCritical(self) << "mousePress: resolved object is not a QQuickItem:" << path;
+        return false;
+    }
+
+    auto window = item->window();
+    if (!window) {
+        qCCritical(self) << "mousePress: item has no window:" << path;
+        return false;
+    }
+
     const auto center = item->mapToScene(QPointF(item->width() / 2, item->height() / 2));
     const auto screenPos = window->mapToGlobal(center.toPoint());
 
-    qCDebug(self) << center << screenPos;
+    qCDebug(self) << "mousePress" << center << screenPos;
 
     auto pressEvent = new QMouseEvent(QEvent::MouseButtonPress, center, screenPos, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
     QGuiApplication::postEvent(window, pressEvent);
+
+    return true;
+}
+
+bool QuickTestEngine::mouseRelease(const QList<PathPart> &path)
+{
+    auto variant = find(path);
+    if (!variant.canConvert<QObject *>()) {
+        qCCritical(self) << "mouseRelease: path did not resolve to an object:" << path;
+        return false;
+    }
+
+    auto item = qobject_cast<QQuickItem *>(variant.value<QObject *>());
+    if (!item) {
+        qCCritical(self) << "mouseRelease: resolved object is not a QQuickItem:" << path;
+        return false;
+    }
+
+    auto window = item->window();
+    if (!window) {
+        qCCritical(self) << "mouseRelease: item has no window:" << path;
+        return false;
+    }
+
+    const auto center = item->mapToScene(QPointF(item->width() / 2, item->height() / 2));
+    const auto screenPos = window->mapToGlobal(center.toPoint());
+
+    qCDebug(self) << "mouseRelease" << center << screenPos;
 
     auto releaseEvent = new QMouseEvent(QEvent::MouseButtonRelease, center, screenPos, Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
     QGuiApplication::postEvent(window, releaseEvent);
@@ -284,18 +368,160 @@ bool QuickTestEngine::click(const QList<PathPart> &path)
     return true;
 }
 
-QByteArray QuickTestEngine::takeScreenShotAsBase64(QQuickItem *item, const QString &format, int quality)
+QFuture<QByteArray> QuickTestEngine::takeScreenShotAsBase64(QQuickItem *item, const QString &format, int quality)
 {
-    auto window = item->window();
-    auto image = window->grabWindow();
+    qCInfo(self) << "taking screenshot (item, format, quality):" << item << format << quality;
+    auto promise = std::make_shared<QPromise<QByteArray>>();
+    promise->start();
+    auto future = promise->future();
 
-    QByteArray data;
-
-    {
-        QBuffer buffer{&data};
-        buffer.open(QIODevice::WriteOnly);
-        image.save(&buffer, qUtf8Printable(format), quality);
+    if (!item) {
+        qCWarning(self) << "item invalid!";
+        promise->finish();
+        return future;
     }
 
-    return data.toBase64();
+    auto grabResult = item->grabToImage();
+    QObject::connect(grabResult.get(), &QQuickItemGrabResult::ready, item, [grabResult, promise, format, quality]() {
+        QByteArray data;
+        QBuffer buffer{&data};
+        buffer.open(QIODevice::WriteOnly);
+        grabResult->image().save(&buffer, qUtf8Printable(format), quality);
+        promise->addResult(data.toBase64());
+
+        qCInfo(self) << "screenshot comlete";
+        promise->finish();
+    });
+
+    return future;
+}
+
+bool QuickTestEngine::eventLogging() const
+{
+    return _eventLogging;
+}
+
+void QuickTestEngine::setEventLogging(bool newEventLogging)
+{
+    if (_eventLogging == newEventLogging)
+        return;
+
+    _eventLogging = newEventLogging;
+    emit eventLoggingChanged();
+
+    if (_eventLogging) {
+        QGuiApplication::instance()->installEventFilter(this);
+        _recording.start = QDateTime::currentDateTime();
+        _recording.end = QDateTime();
+        _recording.frames.clear();
+    }
+
+    else {
+        QGuiApplication::instance()->removeEventFilter(this);
+        _recording.end = QDateTime::currentDateTime();
+    }
+}
+
+bool QuickTestEngine::enabled() const
+{
+    return _enabled;
+}
+
+void QuickTestEngine::setEnabled(bool newEnabled)
+{
+    if (_enabled == newEnabled)
+        return;
+
+    _enabled = newEnabled;
+    emit enabledChanged();
+}
+
+QString QuickTestEngine::address() const
+{
+    return _address;
+}
+
+void QuickTestEngine::setAddress(const QString &newAddress)
+{
+    if (_address == newAddress)
+        return;
+    _address = newAddress;
+    emit addressChanged();
+}
+
+int QuickTestEngine::port() const
+{
+    return _port;
+}
+
+void QuickTestEngine::setPort(int newPort)
+{
+    if (_port == newPort)
+        return;
+    _port = newPort;
+    emit portChanged();
+}
+
+QuickTestEngine::RecordingFrame::Type event2recording(QEvent::Type type)
+{
+    switch (type) {
+    case QEvent::TouchBegin:
+    case QEvent::MouseButtonPress:
+        return QuickTestEngine::RecordingFrame::Press;
+    case QEvent::TouchEnd:
+    case QEvent::MouseButtonRelease:
+        return QuickTestEngine::RecordingFrame::Release;
+    default:
+        return QuickTestEngine::RecordingFrame::Unknown;
+    }
+}
+
+QuickTestEngine::Path path(const QObject *object)
+{
+    QuickTestEngine::Path path;
+
+    while (object) {
+        QuickTestEngine::PathPart pathPart;
+
+        QQmlContext *context = qmlContext(object);
+        if (context)
+            pathPart.id = context->nameForObject(object);
+
+        auto metaObject = object->metaObject();
+        if (metaObject)
+            pathPart.typeName = metaObject->className();
+
+        pathPart.objectName = object->objectName();
+
+        // @TODO: this might not be easily done, maybe via attached property?
+        // pathPart.index = ???
+
+        // Properties cannot be clicked so no need/possiblity to handle those
+    }
+
+    return path;
+}
+
+bool QuickTestEngine::eventFilter(QObject *object, QEvent *event)
+{
+    if (qobject_cast<QQuickWindow *>(object))
+        return QObject::eventFilter(object, event);
+
+    switch (event->type()) {
+    case QEvent::TouchBegin:
+    case QEvent::TouchEnd:
+    case QEvent::MouseButtonPress:
+    case QEvent::MouseButtonRelease:
+        qCDebug(self) << object << event->type();
+        _recording.frames.append({
+            QDateTime::currentDateTime(),
+            event2recording(event->type()),
+            path(object),
+        });
+
+    default:
+        break;
+    }
+
+    return QObject::eventFilter(object, event);
 }
