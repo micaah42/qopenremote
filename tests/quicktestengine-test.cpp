@@ -40,9 +40,9 @@ private slots:
         target.setObjectName("target");
         window.show();
 
-        QuickTestEngine::PathPart windowPart;
+        PathPart windowPart;
         windowPart.typeName = "QQuickWindow";
-        QuickTestEngine::PathPart itemPart;
+        PathPart itemPart;
         itemPart.objectName = "target";
 
         QuickTestEngine engine;
@@ -59,7 +59,7 @@ private slots:
         target.setProperty("answer", 42);
         window.show();
 
-        QList<QuickTestEngine::PathPart> path{
+        Path path{
             {.typeName = "QQuickWindow"},
             {.objectName = "target"},
             {.propertyName = "answer"},
@@ -89,7 +89,7 @@ private slots:
 
         QVERIFY(QTest::qWaitForWindowExposed(window));
 
-        QList<QuickTestEngine::PathPart> path{
+        Path path{
             {.id = "_window"},
             {.objectName = "clickTarget"},
             {.id = "_mouseArea"},
@@ -103,7 +103,7 @@ private slots:
         QVERIFY(testEngine.click(path));
         QTest::qWait(100);
 
-        QList<QuickTestEngine::PathPart> path1{
+        Path path1{
             {.id = "_window"},
             {.objectName = "clickTarget"},
             {.propertyName = "clickCount"},
@@ -128,7 +128,7 @@ private slots:
         QVERIFY(window);
         QVERIFY(QTest::qWaitForWindowExposed(window));
 
-        QList<QuickTestEngine::PathPart> path{
+        Path path{
             {.id = "_window"},
             {.id = "_target"},
             {.propertyName = "answer"},
@@ -148,7 +148,7 @@ private slots:
         QVERIFY(window);
         QVERIFY(QTest::qWaitForWindowExposed(window));
 
-        QList<QuickTestEngine::PathPart> path{
+        Path path{
             {.id = "_window"},
             {.id = "_target"},
             {.propertyName = "answer"},

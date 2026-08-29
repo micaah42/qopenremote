@@ -10,27 +10,6 @@
 #include <websocketserver.h>
 
 /*!
-    \class QuickTestEngine
-    \ingroup testing
-    \brief Provides utilities for testing QML/Quick applications.
-
-    QuickTestEngine offers a set of methods for finding QML objects, simulating user
-    interactions, and capturing screenshots in QML-based applications. It uses a path-based
-    system to locate and interact with QML items.
-
-    \sa PathPart
-*/
-class QuickTestEngine : public QObject
-{
-    Q_OBJECT
-
-    Q_PROPERTY(bool eventLogging READ eventLogging WRITE setEventLogging NOTIFY eventLoggingChanged FINAL)
-    Q_PROPERTY(bool enabled READ enabled WRITE setEnabled NOTIFY enabledChanged FINAL)
-    Q_PROPERTY(QString address READ address WRITE setAddress NOTIFY addressChanged FINAL)
-    Q_PROPERTY(int port READ port WRITE setPort NOTIFY portChanged FINAL)
-
-public:
-    /*!
         \struct PathPart
         \ingroup testing
         \brief Represents a single step in a path to locate a QML object.
@@ -57,33 +36,61 @@ public:
             The property name to access on the matched object. Used for fixed access after finding
             the object.
     */
-    struct PathPart
-    {
-        QString id;
-        QString typeName;
-        QString objectName;
+struct PathPart
+{
+    QString id;
+    QString typeName;
+    QString objectName;
 
-        int index = -1;
-        QString propertyName;
-    };
+    int index = -1;
+    QString propertyName;
+};
 
-    using Path = QList<PathPart>;
+using Path = QList<PathPart>;
 
-    struct RecordingFrame
-    {
-        enum Type { Unknown, Press, Release };
-        QDateTime time;
-        Type action;
-        Path path;
-    };
+struct RecordingFrame
+{
+    enum Type { Unknown, Press, Release };
+    Q_ENUM(Type);
 
-    struct Recording
-    {
-        QDateTime start;
-        QDateTime end;
-        QList<RecordingFrame> frames;
-    };
+    QDateTime time;
+    Type action;
+    Path path;
 
+    Q_GADGET
+};
+
+struct Recording
+{
+    QDateTime start;
+    QDateTime end;
+    QList<RecordingFrame> frames;
+
+    Q_GADGET
+};
+
+/*!
+    \class QuickTestEngine
+    \ingroup testing
+    \brief Provides utilities for testing QML/Quick applications.
+
+    QuickTestEngine offers a set of methods for finding QML objects, simulating user
+    interactions, and capturing screenshots in QML-based applications. It uses a path-based
+    system to locate and interact with QML items.
+
+    \sa PathPart
+*/
+class QuickTestEngine : public QObject
+{
+    Q_OBJECT
+    QML_ELEMENT
+
+    Q_PROPERTY(bool eventLogging READ eventLogging WRITE setEventLogging NOTIFY eventLoggingChanged FINAL)
+    Q_PROPERTY(bool enabled READ enabled WRITE setEnabled NOTIFY enabledChanged FINAL)
+    Q_PROPERTY(QString address READ address WRITE setAddress NOTIFY addressChanged FINAL)
+    Q_PROPERTY(int port READ port WRITE setPort NOTIFY portChanged FINAL)
+
+public:
     /*!
         \brief Constructs a QuickTestEngine with the given \a parent.
     */
@@ -244,6 +251,6 @@ private:
 
     Used for debugging and logging path specifications.
 */
-QDebug operator<<(QDebug debug, const QuickTestEngine::PathPart &pathPart);
+QDebug operator<<(QDebug debug, const PathPart &pathPart);
 
 #endif // QUICKTESTENGINE_H

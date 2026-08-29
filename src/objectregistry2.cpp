@@ -59,8 +59,10 @@ RegisteredValue::Ptr ObjectRegistry2::registerValue(
                     emit valueChanged(registeredValue->key, newValue);
                     qCDebug(self) << "registered value changed:" << registeredValue->key << "=>" << newValue;
 
-                    this->deregisterValue(registeredValue->key);
-                    this->registerValue(registeredValue->key, newValue, registeredValue->owner, registeredValue->property);
+                    if (newValue.canConvert<QObject *>() || newValue.canConvert<QVariantList>()) {
+                        this->deregisterValue(registeredValue->key);
+                        this->registerValue(registeredValue->key, newValue, registeredValue->owner, registeredValue->property);
+                    }
                 });
             }
         }
@@ -199,15 +201,14 @@ QVariant ObjectRegistry2::callMethod(const QMetaMethod &method, QObject *object,
     }
 
     QList<QGenericArgument> gArgs;
-    auto returnType = method.returnMetaType();
 
     for (auto const &variant : variants) {
-        QGenericArgument gArg(returnType.name(), const_cast<void *>(variant.constData()));
+        QGenericArgument gArg(variant.typeName(), const_cast<void *>(variant.constData()));
         gArgs.append(gArg);
     }
 
-    QVariant returnValue(method.returnMetaType(), static_cast<void *>(nullptr));
-    QGenericReturnArgument gReturn(method.typeName(), const_cast<void *>(returnValue.constData()));
+    QVariant returnValue(method.returnMetaType());
+    QGenericReturnArgument gReturn(method.typeName(), returnValue.data());
 
     try {
         bool ok = method.invoke( //
@@ -242,13 +243,19 @@ QVariant ObjectRegistry2::callMethod(const QMetaMethod &method, QObject *object,
     }
 
     qCDebug(self) << "method result:" << method.methodSignature() << returnValue;
-    return returnValue;
+    return QVariant{method.returnMetaType(), returnValue.constData()};
 }
 
 QVariant ObjectRegistry2::call(const QString &key, const QVariantList &arguments)
 {
     qCInfo(self) << "call value:" << key << arguments;
-    return {};
+    const auto method = _registeredMethods.constFind(key);
+    if (method == _registeredMethods.cend()) {
+        qCWarning(self) << "failed to call: no method registered under key" << key;
+        return {};
+    }
+
+    return (*method)(arguments);
 }
 
 RegisteredValue::RegisteredValue() {}

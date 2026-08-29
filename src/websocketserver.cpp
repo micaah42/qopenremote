@@ -14,9 +14,52 @@ WebSocketServer::WebSocketServer(ObjectRegistry2 &registry, QObject *parent)
     , _server{new QWebSocketServer{"talking-clock", QWebSocketServer::NonSecureMode, this}}
 {
     connect(_server, &QWebSocketServer::newConnection, this, &WebSocketServer::onNewConnection);
+}
 
-    if (!_server->listen(QHostAddress{"127.0.0.1"}, 21120))
+QString WebSocketServer::address() const
+{
+    return _address;
+}
+
+void WebSocketServer::setAddress(const QString &address)
+{
+    if (_address == address)
+        return;
+
+    _address = address;
+    emit addressChanged();
+}
+
+quint16 WebSocketServer::port() const
+{
+    return _port;
+}
+
+void WebSocketServer::setPort(quint16 port)
+{
+    if (_port == port)
+        return;
+
+    _port = port;
+    emit portChanged();
+}
+
+bool WebSocketServer::open()
+{
+    if (_server->isListening())
+        return true;
+
+    if (!_server->listen(QHostAddress(_address), _port)) {
         qCCritical(self) << "failed to start websocket server:" << _server->errorString();
+        return false;
+    }
+
+    return true;
+}
+
+void WebSocketServer::close()
+{
+    _server->close();
 }
 
 void WebSocketServer::onNewConnection()

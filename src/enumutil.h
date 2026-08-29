@@ -37,4 +37,25 @@ public:
     {}
 };
 
+template<typename Enum>
+QString enumValueToKey(Enum value)
+{
+    static auto const metaEnum = QMetaEnum::fromType<Enum>();
+    return metaEnum.valueToKey(static_cast<int>(value));
+}
+
+template<typename Enum, Enum errorValue>
+Enum enumKeyToValue(const QString &key)
+{
+    static auto const metaEnum = QMetaEnum::fromType<Enum>();
+
+    bool ok;
+    auto value = static_cast<Enum>(metaEnum.keyToValue(qUtf8Printable(key), &ok));
+
+    if (!ok)
+        return errorValue;
+    else
+        return value;
+}
+
 #endif // ENUMUTIL_H

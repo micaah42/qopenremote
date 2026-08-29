@@ -18,8 +18,6 @@ find_package(Qt6 REQUIRED COMPONENTS Core)
 add_library(${PROJECT_NAME} SHARED
     src/qopenremote_global.h
 
-    # src/qobjectregistry.cpp
-    # src/qobjectregistry.h
     src/websocketserver.cpp
     src/websocketserver.h
     src/jsonadapter.cpp

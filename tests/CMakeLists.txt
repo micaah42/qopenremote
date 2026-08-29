@@ -16,3 +16,16 @@ qopenremote_add_test(qobjectregistry-test)
 qopenremote_add_test(json-test)
 qopenremote_add_test(quicktestengine-test)
 
+add_executable(qopenremote-ws-test-server websocket-test-server.cpp)
+target_link_libraries(qopenremote-ws-test-server PRIVATE Qt::Core Qt::WebSockets qopenremote)
+
+find_package(Python3 REQUIRED COMPONENTS Interpreter)
+
+add_test(
+    NAME qopenremote-ws-pytest
+    COMMAND ${Python3_EXECUTABLE} -m pytest ${CMAKE_CURRENT_SOURCE_DIR}/test_qopenremote_ws.py
+)
+set_tests_properties(qopenremote-ws-pytest PROPERTIES
+    ENVIRONMENT "QOPENREMOTE_TEST_SERVER=$<TARGET_FILE:qopenremote-ws-test-server>"
+)
+

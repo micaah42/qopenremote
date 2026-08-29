@@ -6,6 +6,9 @@
 #include <QElapsedTimer>
 #include <QGuiApplication>
 #include <QImage>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QLoggingCategory>
 #include <QMetaObject>
 #include <QMouseEvent>
@@ -15,6 +18,8 @@
 #include <QQuickWindow>
 #include <QTimer>
 
+#include <enumutil.h>
+
 namespace {
 Q_LOGGING_CATEGORY(self, "quicktestengine") //, QtWarningMsg)
 }
@@ -23,7 +28,7 @@ Q_LOGGING_CATEGORY(self, "quicktestengine") //, QtWarningMsg)
     Writes the QuickTestEngine::PathPart \a pathPart to the debug stream \a debug.
     Used for displaying path specifications in debugging output.
 */
-QDebug operator<<(QDebug debug, const QuickTestEngine::PathPart &pathPart)
+QDebug operator<<(QDebug debug, const PathPart &pathPart)
 {
     QDebugStateSaver saver(debug);
     debug.nospace()                                  //
@@ -43,7 +48,10 @@ QuickTestEngine::QuickTestEngine(QObject *parent)
     , _address{"127.0.0.1"}
     , _port{21129}
     , _webSocketServer{_registry}
-{}
+{
+    _registry.registerValue("quickTestEngine", this);
+    _webSocketServer.open();
+}
 
 bool forEachChild(QObject *object, const std::function<bool(QObject *)> &callback)
 {
@@ -419,6 +427,40 @@ void QuickTestEngine::setEventLogging(bool newEventLogging)
     else {
         QGuiApplication::instance()->removeEventFilter(this);
         _recording.end = QDateTime::currentDateTime();
+
+        QJsonArray frames;
+
+        for (auto const &recordingFrame : std::as_const(_recording.frames)) {
+            QJsonArray path;
+
+            for (auto const &pathPart : recordingFrame.path) {
+                path.append(
+                    QJsonObject{
+                        {"id", pathPart.id},
+                        {"typeName", pathPart.typeName},
+                        {"objectName", pathPart.objectName},
+                        {"index", pathPart.index},
+                        {"propertyName", pathPart.propertyName},
+                    }
+                );
+            }
+
+            frames.append(
+                QJsonObject{
+                    {"timestamp", recordingFrame.time.toMSecsSinceEpoch()},
+                    {"action", enumValueToKey(recordingFrame.action)},
+                    {"path", path},
+                }
+            );
+        }
+
+        QJsonObject recordingObject{
+            {"start", _recording.start.toMSecsSinceEpoch()},
+            {"end", _recording.end.toMSecsSinceEpoch()},
+            {"frames", frames},
+        };
+
+        std::cout << "recording:\n\n" << qUtf8Printable(QJsonDocument{recordingObject}.toJson()) << "\n\n" << std::endl;
     }
 }
 
@@ -462,26 +504,26 @@ void QuickTestEngine::setPort(int newPort)
     emit portChanged();
 }
 
-QuickTestEngine::RecordingFrame::Type event2recording(QEvent::Type type)
+RecordingFrame::Type event2recording(QEvent::Type type)
 {
     switch (type) {
     case QEvent::TouchBegin:
     case QEvent::MouseButtonPress:
-        return QuickTestEngine::RecordingFrame::Press;
+        return RecordingFrame::Press;
     case QEvent::TouchEnd:
     case QEvent::MouseButtonRelease:
-        return QuickTestEngine::RecordingFrame::Release;
+        return RecordingFrame::Release;
     default:
-        return QuickTestEngine::RecordingFrame::Unknown;
+        return RecordingFrame::Unknown;
     }
 }
 
-QuickTestEngine::Path path(const QObject *object)
+Path path(const QObject *object)
 {
-    QuickTestEngine::Path path;
+    Path path;
 
     while (object) {
-        QuickTestEngine::PathPart pathPart;
+        PathPart pathPart;
 
         QQmlContext *context = qmlContext(object);
         if (context)
@@ -497,6 +539,9 @@ QuickTestEngine::Path path(const QObject *object)
         // pathPart.index = ???
 
         // Properties cannot be clicked so no need/possiblity to handle those
+        object = object->parent();
+
+        path.append(pathPart);
     }
 
     return path;
