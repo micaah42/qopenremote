@@ -12,6 +12,12 @@ from typing import Any
 NotificationHandler = Callable[[str, Any], None]
 
 
+class QOpenRemoteCallError(RuntimeError):
+    """A remote method call completed without a return value."""
+
+    pass
+
+
 class QOpenRemoteWebSocket:
     """Connect to an ObjectRegistry2 exposed by ``WebSocketServer``.
 
@@ -95,6 +101,10 @@ class QOpenRemoteWebSocket:
                     if response_type == "notify" and response.get("key") == key:
                         return response.get("value")
                     continue
+                if response.get("type") == "error" and response.get("key") == key:
+                    raise QOpenRemoteCallError(
+                        str(response.get("error", "remote call failed"))
+                    )
                 if response.get("type") == response_type and response.get("key") == key:
                     return response.get("value")
 

@@ -1,4 +1,7 @@
 #include <QtTest/QTest>
+#include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QQmlApplicationEngine>
 #include <QQuickItem>
 #include <QQuickWindow>
@@ -11,6 +14,26 @@ class QuickTestEngineTest : public QObject
     Q_OBJECT
 
 private slots:
+    void convertsVariantListOfMapsToPath()
+    {
+        QuickTestEngine engine;
+        QVariant pathVariant{QVariantList{
+            QVariantMap{{"id", "window"}, {"typeName", "QQuickWindow"}},
+            QVariantMap{{"objectName", "target"}, {"index", 3}, {"propertyName", "answer"}},
+        }};
+
+        QVERIFY(pathVariant.convert(QMetaType::fromType<Path>()));
+        const auto path = pathVariant.value<Path>();
+
+        QCOMPARE(path.size(), 2);
+        QCOMPARE(path.at(0).id, "window");
+        QCOMPARE(path.at(0).typeName, "QQuickWindow");
+        QCOMPARE(path.at(0).index, -1);
+        QCOMPARE(path.at(1).objectName, "target");
+        QCOMPARE(path.at(1).index, 3);
+        QCOMPARE(path.at(1).propertyName, "answer");
+    }
+
     void matchingFiltersBasic()
     {
         QObject object;
@@ -46,7 +69,7 @@ private slots:
         itemPart.objectName = "target";
 
         QuickTestEngine engine;
-        const auto result = engine.find({windowPart, itemPart});
+        const auto result = engine.find({{windowPart, itemPart}});
 
         QCOMPARE(result.value<QObject *>(), static_cast<QObject *>(&target));
     }
@@ -59,11 +82,11 @@ private slots:
         target.setProperty("answer", 42);
         window.show();
 
-        Path path{
+        Path path{{
             {.typeName = "QQuickWindow"},
             {.objectName = "target"},
             {.propertyName = "answer"},
-        };
+        }};
 
         QuickTestEngine engine;
         QCOMPARE(engine.find(path).toInt(), 42);
@@ -89,11 +112,11 @@ private slots:
 
         QVERIFY(QTest::qWaitForWindowExposed(window));
 
-        Path path{
+        Path path{{
             {.id = "_window"},
             {.objectName = "clickTarget"},
             {.id = "_mouseArea"},
-        };
+        }};
 
         QuickTestEngine testEngine;
         auto item = qobject_cast<QQuickItem *>(testEngine.find(path).value<QObject *>());
@@ -103,11 +126,11 @@ private slots:
         QVERIFY(testEngine.click(path));
         QTest::qWait(100);
 
-        Path path1{
+        Path path1{{
             {.id = "_window"},
             {.objectName = "clickTarget"},
             {.propertyName = "clickCount"},
-        };
+        }};
 
         QCOMPARE(testEngine.find(path1).toInt(), 1);
     }
@@ -128,11 +151,11 @@ private slots:
         QVERIFY(window);
         QVERIFY(QTest::qWaitForWindowExposed(window));
 
-        Path path{
+        Path path{{
             {.id = "_window"},
             {.id = "_target"},
             {.propertyName = "answer"},
-        };
+        }};
 
         QuickTestEngine testEngine;
         QVERIFY(!testEngine.click(path));
@@ -148,11 +171,11 @@ private slots:
         QVERIFY(window);
         QVERIFY(QTest::qWaitForWindowExposed(window));
 
-        Path path{
+        Path path{{
             {.id = "_window"},
             {.id = "_target"},
             {.propertyName = "answer"},
-        };
+        }};
 
         QuickTestEngine testEngine;
         QCOMPARE(testEngine.find(path).toInt(), 42);
@@ -172,34 +195,66 @@ private slots:
         QuickTestEngine testEngine;
 
         // Repeater item, nested one level deeper
-        QCOMPARE(testEngine
-                     .find({
-                         {.id = "_window"},
-                         {.objectName = "nestedInRepeaterItem1"},
-                         {.propertyName = "label"},
-                     })
-                     .toString(),
-                 "nested 1");
+        QCOMPARE(
+            testEngine
+                .find({{
+                    {.id = "_window"},
+                    {.objectName = "nestedInRepeaterItem1"},
+                    {.propertyName = "label"},
+                }})
+                .toString(),
+            "nested 1"
+        );
 
         // ListView delegate, selected by objectName
-        QCOMPARE(testEngine
-                     .find({
-                         {.id = "_window"},
-                         {.objectName = "listViewDelegate2"},
-                         {.propertyName = "value"},
-                     })
-                     .toString(),
-                 "third");
+        QCOMPARE(
+            testEngine
+                .find({{
+                    {.id = "_window"},
+                    {.objectName = "listViewDelegate2"},
+                    {.propertyName = "value"},
+                }})
+                .toString(),
+            "third"
+        );
 
         // Container's contentItem, nested two levels deep
-        QCOMPARE(testEngine
-                     .find({
-                         {.id = "_window"},
-                         {.objectName = "deeplyNestedItem"},
-                         {.propertyName = "depth"},
-                     })
-                     .toInt(),
-                 3);
+        QCOMPARE(
+            testEngine
+                .find({{
+                    {.id = "_window"},
+                    {.objectName = "deeplyNestedItem"},
+                    {.propertyName = "depth"},
+                }})
+                .toInt(),
+            3
+        );
+    }
+
+    void saveRecordingSavesJsonFile()
+    {
+        QuickTestEngine engine;
+        engine.setEventLogging(true);
+        QTest::qWait(10);
+        engine.setEventLogging(false);
+
+        QString testFilename = "test_recording.json";
+        QFile::remove(testFilename);
+
+        QVERIFY(engine.saveRecording(testFilename));
+        QVERIFY(QFile::exists(testFilename));
+
+        QFile file(testFilename);
+        QVERIFY(file.open(QIODevice::ReadOnly));
+        QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+        file.close();
+        QFile::remove(testFilename);
+
+        QVERIFY(doc.isObject());
+        QJsonObject obj = doc.object();
+        QVERIFY(obj.contains("start"));
+        QVERIFY(obj.contains("end"));
+        QVERIFY(obj.contains("frames"));
     }
 };
 

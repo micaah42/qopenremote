@@ -14,6 +14,7 @@ endfunction()
 
 qopenremote_add_test(qobjectregistry-test)
 qopenremote_add_test(json-test)
+qopenremote_add_test(jsonadapter-test)
 qopenremote_add_test(quicktestengine-test)
 
 add_executable(qopenremote-ws-test-server websocket-test-server.cpp)

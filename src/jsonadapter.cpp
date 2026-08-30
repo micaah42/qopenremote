@@ -1,5 +1,7 @@
 #include "jsonadapter.h"
 
+#include <QFuture>
+#include <QFutureWatcher>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -92,10 +94,58 @@ void JSONAdapter::handleSubscribe(const QString &key)
     emit sendMessage(QJsonDocument{object}.toJson());
 }
 
+// try {
+//     if (watcher->future().isCanceled()) {
+//         QJsonObject object{{"type", "error"}, {"key", key}, {"error", "cancelled"}};
+//         emit sendMessage(QJsonDocument{object}.toJson());
+//         return;
+//     }
+//     if (watcher->future().resultCount()) {
+//         QJsonObject object{{"type", "return"}, {"value", JSON::serialize(watcher->result())}, {"key", key}};
+//         emit sendMessage(QJsonDocument{object}.toJson());
+//     } else {
+//         QJsonObject object{{"type", "return"}, {"value", QJsonValue()}, {"key", key}};
+//         emit sendMessage(QJsonDocument{object}.toJson());
+//     }
+// } catch (const std::exception &error) {
+//     QJsonObject object{{"type", "error"}, {"key", key}, {"error", QString::fromUtf8(error.what())}};
+//     emit sendMessage(QJsonDocument{object}.toJson());
+// } catch (...) {
+//     QJsonObject object{{"type", "error"}, {"key", key}, {"error", "unknown error"}};
+//     emit sendMessage(QJsonDocument{object}.toJson());
+// }
+
 void JSONAdapter::handleCall(const QString &key, const QJsonArray &array)
 {
     qCInfo(self) << "calling" << key << array;
     auto returnValue = _registry.call(key, array.toVariantList());
+
+    if (returnValue.metaType() == QMetaType::fromType<QFuture<QVariant>>()) {
+        auto *watcher = new QFutureWatcher<QVariant>{this};
+        connect(watcher, &QFutureWatcher<QVariant>::finished, this, [this, key, watcher]() {
+            watcher->deleteLater();
+
+            QJsonValue result;
+
+            try {
+                const auto results = watcher->future().results();
+                if (!results.empty())
+                    result = JSON::serialize(results.first());
+            } catch (const QException &e) {
+                result = QString::fromUtf8(e.what());
+            } catch (const std::exception &error) {
+                result = QString::fromUtf8(error.what());
+            }
+
+            QString resultKey = watcher->future().isCanceled() ? "error" : "value";
+            QString typeValue = watcher->future().isCanceled() ? "error" : "return";
+
+            QJsonObject object{{"type", typeValue}, {"key", key}, {resultKey, result}};
+            emit sendMessage(QJsonDocument{object}.toJson());
+        });
+        watcher->setFuture(returnValue.value<QFuture<QVariant>>());
+        return;
+    }
 
     QJsonObject object{
         {"type", "return"},

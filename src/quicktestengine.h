@@ -44,9 +44,16 @@ struct PathPart
 
     int index = -1;
     QString propertyName;
+
+    Q_GADGET
 };
 
-using Path = QList<PathPart>;
+struct Path : public QList<PathPart>
+{
+    Q_GADGET
+};
+
+Q_DECLARE_METATYPE(Path)
 
 struct RecordingFrame
 {
@@ -108,7 +115,17 @@ public:
     int port() const;
     void setPort(int newPort);
 
+    const Recording &recording() const;
+
 public slots:
+
+    /*!
+        \brief Saves the current recording to a JSON file.
+
+        \param filename The path/name of the file to save the recording to.
+        \return \c true if saving succeeded; \c false otherwise.
+    */
+    bool saveRecording(const QString &filename = {});
 
     /*!
         \brief Finds a QML object matching the given path.
@@ -164,7 +181,8 @@ public slots:
 
         \sa mousePress(), mouseRelease()
     */
-    bool click(const Path &path, double relX = 0.5, double relY = 0.5);
+    bool click(const Path &path);
+    bool clickPosition(const Path &path, double relX, double relY);
 
     /*!
         \brief Simulates a mouse button press on the item at the specified path.
@@ -234,6 +252,8 @@ protected:
     virtual bool eventFilter(QObject *watched, QEvent *event) override;
 
 private:
+    QJsonObject recordingToJson() const;
+
     bool _eventLogging;
     bool _enabled;
     QString _address;

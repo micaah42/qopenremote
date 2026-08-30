@@ -176,7 +176,7 @@ QVariant ObjectRegistry2::callMethod(const QMetaMethod &method, QObject *object,
 {
     qCInfo(self) << "call method:" << method.methodSignature() << args;
     if (method.parameterCount() != args.size()) {
-        qCCritical(self) << "invalid arg size:" << method.parameterCount() << args.size();
+        qCCritical(self) << "invalid arg size (expected, got):" << method.parameterCount() << args.size();
         return QVariant();
     }
 
