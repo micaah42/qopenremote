@@ -95,9 +95,11 @@ bool forEachChild(QObject *object, const std::function<bool(QObject *)> &callbac
         }
     }
 
-    // Handle regular QObjects and their data()
+    // @TODO: Research handle regular QObjects children
+    // These children seem to contain pointers to freed children :(
+
     else {
-        for (auto *child : object->children()) {
+        for (auto child : object->children()) {
             if (!callback(child))
                 return true;
 
@@ -198,7 +200,6 @@ QVariant QuickTestEngine::find(const Path &path)
     }
 
     qCDebug(self) << "matched root window:" << currentNode;
-
     mutablePath.removeFirst();
 
     while (!mutablePath.empty()) {
@@ -266,23 +267,13 @@ bool QuickTestEngine::isMatching(QObject *object, const PathPart &pathPart)
     if (!object)
         return false;
 
+    qCDebug(self) << "matching (object, pathPart)" << object << pathPart;
+
     if (!pathPart.typeName.isEmpty() && pathPart.typeName != object->metaObject()->className())
         return false;
 
     if (!pathPart.objectName.isEmpty() && object->objectName() != pathPart.objectName)
         return false;
-
-    // if (!pathPart.propertyName.isEmpty()) {
-    // const auto propertyName = pathPart.propertyName.toUtf8();
-    // const auto metaPropertyIndex = object->metaObject()->indexOfProperty(propertyName.constData());
-    // const auto dynamicProps = object->dynamicPropertyNames();
-    // const bool hasMatchingProperty = metaPropertyIndex >= 0 || std::any_of(dynamicProps.begin(), dynamicProps.end(), [propertyName](const QByteArray &candidate) {
-    // return candidate == propertyName;
-    // });
-
-    // if (!hasMatchingProperty)
-    // return false;
-    // }
 
     if (!pathPart.id.isEmpty()) {
         QQmlContext *context = qmlContext(object);
@@ -297,6 +288,7 @@ bool QuickTestEngine::isMatching(QObject *object, const PathPart &pathPart)
         }
     }
 
+    qCDebug(self) << "match found!";
     return true;
 }
 
