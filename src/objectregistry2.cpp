@@ -4,7 +4,7 @@
 #include <QMetaProperty>
 
 namespace {
-Q_LOGGING_CATEGORY(self, "registry")
+Q_LOGGING_CATEGORY(self, "registry", QtWarningMsg)
 }
 
 const QMetaMethod RegisteredValue::notifierSlot = QMetaMethod::fromSignal(&RegisteredValue::changed);

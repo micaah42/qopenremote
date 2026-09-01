@@ -22,7 +22,7 @@
 #include <enumutil.h>
 
 namespace {
-Q_LOGGING_CATEGORY(self, "quicktestengine") //, QtWarningMsg)
+Q_LOGGING_CATEGORY(self, "quicktestengine", QtWarningMsg)
 
 Path pathFromVariantList(const QVariantList &variants)
 {
