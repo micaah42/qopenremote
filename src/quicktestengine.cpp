@@ -71,7 +71,7 @@ QuickTestEngine::QuickTestEngine(QObject *parent)
     , _webSocketServer{_registry}
 {
     static const bool pathConverterRegistered = QMetaType::registerConverter<QVariantList, Path>(pathFromVariantList);
-    Q_UNUSED(pathConverterRegistered);
+    Q_ASSERT(pathConverterRegistered);
 
     _registry.registerValue("quickTestEngine", this);
     _webSocketServer.open();
@@ -113,11 +113,15 @@ bool forEachChild(QObject *object, const std::function<bool(QObject *)> &callbac
 
 QVariant findIndexedChild(QObject *object, int index)
 {
-    if (!object || index < 0)
+    if (!object || index < 0) {
+        qCDebug(self) << "cannot resolve indexed child for" << object << "at index" << index;
         return {};
+    }
 
     const auto metaObject = object->metaObject();
     QList<QByteArray> methodNames;
+
+    qCDebug(self) << "resolving indexed child for" << object << "at index" << index;
 
     const auto inheritsType = [metaObject](const char *typeName) {
         for (auto current = metaObject; current; current = current->superClass()) {
@@ -138,8 +142,10 @@ QVariant findIndexedChild(QObject *object, int index)
 
     for (const auto &methodName : methodNames) {
         const auto methodIndex = metaObject->indexOfMethod(methodName.constData());
-        if (methodIndex < 0)
+        if (methodIndex < 0) {
+            qCDebug(self) << "indexed-child accessor is unavailable:" << methodName << "on" << object;
             continue;
+        }
 
         const auto method = metaObject->method(methodIndex);
         QVariant returnValue(method.returnMetaType(), static_cast<void *>(nullptr));
@@ -147,16 +153,26 @@ QVariant findIndexedChild(QObject *object, int index)
         QGenericArgument indexArgument("int", &index);
 
         if (method.invoke(object, Qt::DirectConnection, returnArgument, indexArgument)) {
-            if (returnValue.canConvert<QObject *>())
-                return returnValue;
+            if (returnValue.canConvert<QObject *>()) {
+                qCDebug(self) << "resolved indexed child using" << methodName << ':' << returnValue;
+                return QVariant{method.returnMetaType(), returnValue.constData()};
+            }
+
+            qCDebug(self) << "indexed-child accessor returned a non-object:" << methodName << returnValue;
+        } else {
+            qCDebug(self) << "failed to invoke indexed-child accessor:" << methodName << "on" << object;
         }
     }
 
     const auto children = object->children();
-    if (index >= children.size())
+    if (index >= children.size()) {
+        qCDebug(self) << "indexed child fallback is out of range:" << index << "of" << children.size() << "on" << object;
         return {};
+    }
 
-    return QVariant::fromValue(children.at(index));
+    const auto child = children.at(index);
+    qCDebug(self) << "resolved indexed child using QObject child fallback:" << child;
+    return QVariant::fromValue(child);
 }
 
 /*!
