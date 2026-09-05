@@ -23,26 +23,34 @@ LoggingTool::LoggingTool(QObject *parent)
 
 void LoggingTool::handleMessage(QtMsgType type, const QMessageLogContext &context, const QString &message)
 {
-    QMutexLocker mutex{&_mutex};
+    QString line;
+    QString category = QString::fromUtf8(context.category);
+    {
+        QMutexLocker mutex{&_mutex};
 
-    auto line = qFormatLogMessage(type, context, message);
+        line = qFormatLogMessage(type, context, message);
 
-    if (_useStdOut && (type == QtInfoMsg || type == QtDebugMsg))
-        std::cout << qPrintable(line) << std::flush;
-    else
-        std::cerr << qPrintable(line) << std::flush;
+        if (_useStdOut && (type == QtInfoMsg || type == QtDebugMsg))
+            std::cout << qPrintable(line) << std::flush;
+        else
+            std::cerr << qPrintable(line) << std::flush;
+    }
 
-    auto newRecord = new LogRecord{_records};
-    newRecord->setType(type);
-    newRecord->setCategory(context.category);
-    newRecord->setMessage(message);
-    newRecord->setLine(line);
-    newRecord->moveToThread(QCoreApplication::instance()->thread());
+    QMetaObject::invokeMethod(
+        this,
+        [this, type, category, message, line]() {
+            auto newRecord = new LogRecord(_records);
+            newRecord->setType(type);
+            newRecord->setCategory(category);
+            newRecord->setMessage(message);
+            newRecord->setLine(line);
 
-    _records->append(newRecord);
+            _records->append(newRecord);
 
-    if (_records->length() >= _limit)
-        _records->removeRows(0, _limit - _resizeTo);
+            if (_records->length() >= _limit)
+                _records->removeRows(0, _limit - _resizeTo);
+        },
+        Qt::QueuedConnection);
 }
 
 QString LoggingTool::format() const
