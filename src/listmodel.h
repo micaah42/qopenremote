@@ -271,6 +271,13 @@ public:
     virtual int size() const override { return _list.size(); };
     const QList<T> &list() const { return _list; }
 
+    void setList(const QList<T> &list)
+    {
+        this->beginResetModel();
+        _list = list;
+        this->endResetModel();
+    }
+
     virtual QVariantList asList() const override
     {
         auto const variantList = qToVariantList(_list);
