@@ -7,7 +7,7 @@
 #include <QTimer>
 
 template<class T>
-void qDeleteAll(const QList<T> &list)
+void qDeleteAllLater(const QList<T> &list)
 {
     for (auto const &v : std::as_const(list))
         v->deleteLater();

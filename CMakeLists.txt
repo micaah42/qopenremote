@@ -42,7 +42,9 @@ add_library(${PROJECT_NAME} SHARED
     src/variantutils.cpp
     src/variantutils.h
     src/objectregistry2.cpp
-    src/objectregistry2.h 
+    src/objectregistry2.h
+    src/connectionutils.cpp
+    src/connectionutils.h 
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES SOVERSION ${PROJECT_VERSION})
