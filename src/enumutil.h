@@ -21,6 +21,8 @@ public:
     const QStringList &keys() const;
 
 public slots:
+    int keyToValue(const QString &key) const { return _enum.keyToValue(qUtf8Printable(key)); };
+    QString valueToKey(int value) const { return _enum.valueToKey(value); };
 
 private:
     QMetaEnum _enum;
