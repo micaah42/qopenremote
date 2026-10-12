@@ -33,6 +33,8 @@ add_library(${PROJECT_NAME} SHARED
     src/sortfilterproxylistmodel.h
     src/quicktestengine.cpp
     src/quicktestengine.h
+    src/quicktestrecorder.cpp
+    src/quicktestrecorder.h
 
     src/enumutil.cpp
     src/enumutil.h

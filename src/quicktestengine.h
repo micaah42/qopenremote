@@ -7,6 +7,7 @@
 #include <QQuickItem>
 
 #include <objectregistry2.h>
+#include <quicktestrecorder.h>
 #include <websocketserver.h>
 
 /*!
@@ -14,76 +15,39 @@
         \ingroup testing
         \brief Represents a single step in a path to locate a QML object.
 
-        PathPart defines criteria for matching a QML object during recursive search.
-        Multiple members can be combined for more specific matching, though a balance
-        should be maintained between specificity and stability to account for QML
-        structure changes.
+        PathPart defines criteria for matching a QML object during recursive
+   search. Multiple members can be combined for more specific matching, though a
+   balance should be maintained between specificity and stability to account for
+   QML structure changes.
 
         \var PathPart::id
-            The QML id attribute to match during the search. Used with QQmlContext::nameForObject().
+            The QML id attribute to match during the search. Used with
+   QQmlContext::nameForObject().
 
         \var PathPart::typeName
-            The C++ type name (class name) to match. Compared against metaObject()->className().
+            The C++ type name (class name) to match. Compared against
+   metaObject()->className().
 
         \var PathPart::objectName
             The QObject::objectName property to match.
 
         \var PathPart::index
-            The index of a child item when accessing indexed children (e.g., ListModel items).
-            Default value is -1, indicating index-based access is not used.
+            The index of a child item when accessing indexed children (e.g.,
+   ListModel items). Default value is -1, indicating index-based access is not
+   used.
 
         \var PathPart::propertyName
-            The property name to access on the matched object. Used for fixed access after finding
-            the object.
+            The property name to access on the matched object. Used for fixed
+   access after finding the object.
     */
-struct PathPart
-{
-    QString id;
-    QString typeName;
-    QString objectName;
-
-    int index = -1;
-    QString propertyName;
-
-    Q_GADGET
-};
-
-struct Path : public QList<PathPart>
-{
-    Q_GADGET
-};
-
-Q_DECLARE_METATYPE(Path)
-
-struct RecordingFrame
-{
-    enum Type { Unknown, Press, Release };
-    Q_ENUM(Type);
-
-    QDateTime time;
-    Type action;
-    Path path;
-
-    Q_GADGET
-};
-
-struct Recording
-{
-    QDateTime start;
-    QDateTime end;
-    QList<RecordingFrame> frames;
-
-    Q_GADGET
-};
-
 /*!
     \class QuickTestEngine
     \ingroup testing
     \brief Provides utilities for testing QML/Quick applications.
 
-    QuickTestEngine offers a set of methods for finding QML objects, simulating user
-    interactions, and capturing screenshots in QML-based applications. It uses a path-based
-    system to locate and interact with QML items.
+    QuickTestEngine offers a set of methods for finding QML objects, simulating
+   user interactions, and capturing screenshots in QML-based applications. It
+   uses a path-based system to locate and interact with QML items.
 
     \sa PathPart
 */
@@ -99,8 +63,8 @@ class QuickTestEngine : public QObject
 
 public:
     /*!
-        \brief Constructs a QuickTestEngine with the given \a parent.
-    */
+      \brief Constructs a QuickTestEngine with the given \a parent.
+  */
     explicit QuickTestEngine(QObject *parent = nullptr);
 
     bool eventLogging() const;
@@ -120,111 +84,113 @@ public:
 public slots:
 
     /*!
-        \brief Saves the current recording to a JSON file.
+      \brief Saves the current recording to a JSON file.
 
-        \param filename The path/name of the file to save the recording to.
-        \return \c true if saving succeeded; \c false otherwise.
-    */
+      \param filename The path/name of the file to save the recording to.
+      \return \c true if saving succeeded; \c false otherwise.
+  */
     bool saveRecording(const QString &filename = {});
 
     /*!
-        \brief Finds a QML object matching the given path.
+      \brief Finds a QML object matching the given path.
 
-        Searches for a QML object starting from the root QML window and descending
-        through the QML object hierarchy according to the criteria specified in the
-        \a path. Each PathPart in the path represents a step in the search.
+      Searches for a QML object starting from the root QML window and descending
+      through the QML object hierarchy according to the criteria specified in
+      the \a path. Each PathPart in the path represents a step in the search.
 
-        The search begins by finding a QQuickWindow matching the first PathPart.
-        Subsequent PathParts are applied to child objects.
+      The search begins by finding a QQuickWindow matching the first PathPart.
+      Subsequent PathParts are applied to child objects.
 
-        \param path The path specification for finding the object. Must not be empty.
-        \return A QVariant containing the found QObject, or an invalid QVariant if
-                not found. Check validity with QVariant::isValid().
+      \param path The path specification for finding the object. Must not be
+      empty. \return A QVariant containing the found QObject, or an invalid
+      QVariant if not found. Check validity with QVariant::isValid().
 
-        \note The path may become fragile if the QML structure changes. Aim for a
-              balance between path specificity and path stability.
+      \note The path may become fragile if the QML structure changes. Aim for a
+            balance between path specificity and path stability.
 
-        \sa findAwait(), PathPart
-    */
+      \sa findAwait(), PathPart
+  */
     QVariant find(const Path &path);
 
     /*!
-        \brief Asynchronously finds a QML object, waiting for its creation.
+      \brief Asynchronously finds a QML object, waiting for its creation.
 
-        Similar to find(), but waits for the object to be created if it is not
-        immediately available. This is useful for testing dynamically created
-        objects or objects that appear with a delay.
+      Similar to find(), but waits for the object to be created if it is not
+      immediately available. This is useful for testing dynamically created
+      objects or objects that appear with a delay.
 
-        \param path The path specification for finding the object.
-        \param timeout The maximum time in milliseconds to wait for the object
-                       to be created.
-        \return A QFuture that will contain the found QVariant. The future will
-                be resolved when either the object is found or the timeout expires.
+      \param path The path specification for finding the object.
+      \param timeout The maximum time in milliseconds to wait for the object
+                     to be created.
+      \return A QFuture that will contain the found QVariant. The future will
+              be resolved when either the object is found or the timeout
+     expires.
 
-        \sa find()
-    */
+      \sa find()
+  */
     QFuture<QVariant> findAwait(const Path &path, int timeout);
 
     /*!
-        \brief Simulates a mouse click on the item at the specified path.
+      \brief Simulates a mouse click on the item at the specified path.
 
-        Posts mouse press and release events to simulate a click at the specified
-        position relative to the item's size.
+      Posts mouse press and release events to simulate a click at the specified
+      position relative to the item's size.
 
-        \param path The path to the QQuickItem to click.
-        \param relX The horizontal click position relative to the item's width,
-                    where 0.0 is the left edge and 1.0 is the right edge. Default is 0.5 (center).
-        \param relY The vertical click position relative to the item's height,
-                    where 0.0 is the top edge and 1.0 is the bottom edge. Default is 0.5 (center).
-        \return \c true if the click was successfully posted; \c false if the path
-                did not resolve to a valid QQuickItem or other error occurred.
+      \param path The path to the QQuickItem to click.
+      \param relX The horizontal click position relative to the item's width,
+                  where 0.0 is the left edge and 1.0 is the right edge. Default
+     is 0.5 (center). \param relY The vertical click position relative to the
+     item's height, where 0.0 is the top edge and 1.0 is the bottom edge.
+     Default is 0.5 (center). \return \c true if the click was successfully
+     posted; \c false if the path did not resolve to a valid QQuickItem or other
+     error occurred.
 
-        \sa mousePress(), mouseRelease()
-    */
+      \sa mousePress(), mouseRelease()
+  */
     bool click(const Path &path);
     bool clickPosition(const Path &path, double relX, double relY);
 
     /*!
-        \brief Simulates a mouse button press on the item at the specified path.
+      \brief Simulates a mouse button press on the item at the specified path.
 
-        Posts a mouse press event at the center of the specified item.
+      Posts a mouse press event at the center of the specified item.
 
-        \param path The path to the QQuickItem.
-        \return \c true if the press event was successfully posted; \c false if the
-                path did not resolve to a valid QQuickItem or other error occurred.
+      \param path The path to the QQuickItem.
+      \return \c true if the press event was successfully posted; \c false if
+     the path did not resolve to a valid QQuickItem or other error occurred.
 
-        \sa click(), mouseRelease()
-    */
+      \sa click(), mouseRelease()
+  */
     bool mousePress(const Path &path);
 
     /*!
-        \brief Simulates a mouse button release on the item at the specified path.
+      \brief Simulates a mouse button release on the item at the specified path.
 
-        Posts a mouse release event at the center of the specified item.
+      Posts a mouse release event at the center of the specified item.
 
-        \param path The path to the QQuickItem.
-        \return \c true if the release event was successfully posted; \c false if the
-                path did not resolve to a valid QQuickItem or other error occurred.
+      \param path The path to the QQuickItem.
+      \return \c true if the release event was successfully posted; \c false if
+     the path did not resolve to a valid QQuickItem or other error occurred.
 
-        \sa click(), mousePress()
-    */
+      \sa click(), mousePress()
+  */
     bool mouseRelease(const Path &path);
 
     /*!
-        \brief Captures a screenshot of the item and encodes it as base64.
+      \brief Captures a screenshot of the item and encodes it as base64.
 
-        Takes a screenshot using QQuickItem::grabToImage(), saves it in the specified
-        format, and returns the result as a base64-encoded byte array.
+      Takes a screenshot using QQuickItem::grabToImage(), saves it in the
+     specified format, and returns the result as a base64-encoded byte array.
 
-        \param item The QQuickItem to capture. Must be valid and have an associated window.
-        \param format The image format (e.g., "PNG", "JPEG"). Default is "PNG".
-        \param quality The compression quality for formats that support it (0-100).
-                       Default is 90. Not used for PNG.
-        \return A base64-encoded representation of the screenshot image.
+      \param item The QQuickItem to capture. Must be valid and have an
+     associated window. \param format The image format (e.g., "PNG", "JPEG").
+     Default is "PNG". \param quality The compression quality for formats that
+     support it (0-100). Default is 90. Not used for PNG. \return A
+     base64-encoded representation of the screenshot image.
 
-        \note The encoding is performed synchronously. For large images, this may
-              briefly block the event loop.
-    */
+      \note The encoding is performed synchronously. For large images, this may
+            briefly block the event loop.
+  */
     QFuture<QByteArray> takeScreenShotAsBase64(QQuickItem *item, const QString &format = "PNG", int quality = 90);
 
 signals:
@@ -233,33 +199,32 @@ signals:
     void addressChanged();
     void portChanged();
 
+    void mouseReleased(const QPointF &position);
+    void mousePressed(const QPointF &position);
+
 protected:
     /*!
-        \brief Checks if an object matches the criteria specified in a PathPart.
+      \brief Checks if an object matches the criteria specified in a PathPart.
 
-        Internal helper function used during object search. Compares the given
-        object against all specified criteria in the PathPart.
+      Internal helper function used during object search. Compares the given
+      object against all specified criteria in the PathPart.
 
-        \param object The object to check.
-        \param pathPart The criteria to match against.
-        \return \c true if the object matches all specified criteria; \c false otherwise.
+      \param object The object to check.
+      \param pathPart The criteria to match against.
+      \return \c true if the object matches all specified criteria; \c false
+     otherwise.
 
-        \internal
-    */
+      \internal
+  */
     static bool isMatching(QObject *object, const PathPart &pathPart);
     friend class QuickTestEngineTest;
 
-    virtual bool eventFilter(QObject *watched, QEvent *event) override;
-
 private:
-    QJsonObject recordingToJson() const;
-
-    bool _eventLogging;
     bool _enabled;
     QString _address;
     int _port;
 
-    Recording _recording;
+    QuickTestRecorder _recorder;
 
     ObjectRegistry2 _registry;
     WebSocketServer _webSocketServer;
@@ -267,7 +232,8 @@ private:
 
 /*!
     \relates QuickTestEngine
-    \brief Writes the PathPart \a pathPart to debug output using the \a debug stream.
+    \brief Writes the PathPart \a pathPart to debug output using the \a debug
+   stream.
 
     Used for debugging and logging path specifications.
 */
