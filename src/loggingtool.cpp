@@ -25,6 +25,7 @@ void LoggingTool::handleMessage(QtMsgType type, const QMessageLogContext &contex
 {
     QString line;
     QString category = QString::fromUtf8(context.category);
+    auto now = QDateTime::currentDateTime();
     {
         QMutexLocker mutex{&_mutex};
 
@@ -38,9 +39,10 @@ void LoggingTool::handleMessage(QtMsgType type, const QMessageLogContext &contex
 
     QMetaObject::invokeMethod(
         this,
-        [this, type, category, message, line]() {
+        [this, type, category, message, line, now]() {
             auto newRecord = new LogRecord(_records);
             newRecord->setType(type);
+            newRecord->setTimestamp(now);
             newRecord->setCategory(category);
             newRecord->setMessage(message);
             newRecord->setLine(line);
@@ -50,7 +52,8 @@ void LoggingTool::handleMessage(QtMsgType type, const QMessageLogContext &contex
             if (_records->length() >= _limit)
                 _records->removeRows(0, _limit - _resizeTo);
         },
-        Qt::QueuedConnection);
+        Qt::QueuedConnection
+    );
 }
 
 QString LoggingTool::format() const
@@ -124,63 +127,6 @@ void LoggingTool::setResizeTo(int newResizeTo)
 
     _resizeTo = newResizeTo;
     emit resizeToChanged();
-}
-
-LogRecord::LogRecord(QObject *parent)
-    : QObject{parent}
-    , _type{QtDebugMsg}
-{}
-
-QtMsgType LogRecord::type() const
-{
-    return _type;
-}
-
-void LogRecord::setType(QtMsgType newType)
-{
-    if (_type == newType)
-        return;
-    _type = newType;
-    emit typeChanged();
-}
-
-QString LogRecord::category() const
-{
-    return _category;
-}
-
-void LogRecord::setCategory(const QString &newCategory)
-{
-    if (_category == newCategory)
-        return;
-    _category = newCategory;
-    emit categoryChanged();
-}
-
-QString LogRecord::message() const
-{
-    return _message;
-}
-
-void LogRecord::setMessage(const QString &newMessage)
-{
-    if (_message == newMessage)
-        return;
-    _message = newMessage;
-    emit messageChanged();
-}
-
-QString LogRecord::line() const
-{
-    return _line;
-}
-
-void LogRecord::setLine(const QString &newLine)
-{
-    if (_line == newLine)
-        return;
-    _line = newLine;
-    emit lineChanged();
 }
 
 LogRecordListModel::LogRecordListModel(QObject *parent)

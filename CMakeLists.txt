@@ -40,6 +40,8 @@ add_library(${PROJECT_NAME} SHARED
     src/enumutil.h
     src/loggingtool.cpp
     src/loggingtool.h
+    src/logrecord.cpp
+    src/logrecord.h
     src/deletionutils.h
     src/variantutils.cpp
     src/variantutils.h

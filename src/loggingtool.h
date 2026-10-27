@@ -7,42 +7,7 @@
 
 #include <listmodel.h>
 
-class LogRecord : public QObject
-{
-    Q_OBJECT
-    QML_ELEMENT
-    Q_PROPERTY(QtMsgType type READ type WRITE setType NOTIFY typeChanged FINAL)
-    Q_PROPERTY(QString category READ category WRITE setCategory NOTIFY categoryChanged FINAL)
-    Q_PROPERTY(QString message READ message WRITE setMessage NOTIFY messageChanged FINAL)
-    Q_PROPERTY(QString line READ line WRITE setLine NOTIFY lineChanged FINAL)
-
-public:
-    explicit LogRecord(QObject *parent = nullptr);
-
-    QtMsgType type() const;
-    void setType(QtMsgType newType);
-
-    QString category() const;
-    void setCategory(const QString &newCategory);
-
-    QString message() const;
-    void setMessage(const QString &newMessage);
-
-    QString line() const;
-    void setLine(const QString &newLine);
-
-signals:
-    void typeChanged();
-    void categoryChanged();
-    void messageChanged();
-    void lineChanged();
-
-private:
-    QtMsgType _type;
-    QString _category;
-    QString _message;
-    QString _line;
-};
+#include "logrecord.h"
 
 class LogRecordListModel : public ListModel<LogRecord *>
 {
