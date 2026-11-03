@@ -1,6 +1,8 @@
 #include "loggingtool.h"
 
 #include <QCoreApplication>
+#include <QLoggingCategory>
+#include <QSettings>
 #include <iostream>
 
 LoggingTool *LoggingTool::sLoggingTool = nullptr;
@@ -17,6 +19,11 @@ LoggingTool::LoggingTool(QObject *parent)
     , _resizeTo{10000}
     , _records{new LogRecordListModel{this}}
 {
+    QSettings settings;
+    if (settings.contains("logging/rules")) {
+        _rules = settings.value("logging/rules").toString();
+        QLoggingCategory::setFilterRules(_rules);
+    }
     qInstallMessageHandler(LoggingTool::handleMessageStatic);
     sLoggingTool = this;
 }
@@ -52,8 +59,7 @@ void LoggingTool::handleMessage(QtMsgType type, const QMessageLogContext &contex
             if (_records->length() >= _limit)
                 _records->removeRows(0, _limit - _resizeTo);
         },
-        Qt::QueuedConnection
-    );
+        Qt::QueuedConnection);
 }
 
 QString LoggingTool::format() const
@@ -81,6 +87,8 @@ void LoggingTool::setRules(const QString &newRules)
     if (_rules == newRules)
         return;
     _rules = newRules;
+    QLoggingCategory::setFilterRules(_rules);
+    QSettings{}.setValue("logging/rules", _rules);
     emit rulesChanged();
 }
 

@@ -36,6 +36,8 @@ add_library(${PROJECT_NAME} SHARED
     src/quicktestrecorder.cpp
     src/quicktestrecorder.h
 
+    src/desktopservice.cpp
+    src/desktopservice.h
     src/enumutil.cpp
     src/enumutil.h
     src/loggingtool.cpp
