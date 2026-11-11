@@ -1,4 +1,4 @@
-#include "objectregistry2.h"
+#include "objectregistry.h"
 
 #include <QLoggingCategory>
 #include <QMetaProperty>
@@ -9,18 +9,18 @@ Q_LOGGING_CATEGORY(self, "registry", QtWarningMsg)
 
 const QMetaMethod RegisteredValue::notifierSlot = QMetaMethod::fromSignal(&RegisteredValue::changed);
 
-ObjectRegistry2::ObjectRegistry2(QObject *parent)
+ObjectRegistry::ObjectRegistry(QObject *parent)
     : QObject{parent}
 {
     qCInfo(self) << "create object registry" << this;
 }
 
-RegisteredValue::Ptr ObjectRegistry2::registerValue(const QString &key, QObject *object)
+RegisteredValue::Ptr ObjectRegistry::registerValue(const QString &key, QObject *object)
 {
     return this->registerValue(key, QVariant::fromValue(object));
 }
 
-RegisteredValue::Ptr ObjectRegistry2::registerValue(
+RegisteredValue::Ptr ObjectRegistry::registerValue(
     const QString &key, const QVariant &value, QObject *owner, const QMetaProperty &property, int index
 )
 {
@@ -97,7 +97,7 @@ RegisteredValue::Ptr ObjectRegistry2::registerValue(
     return registeredValue;
 }
 
-void ObjectRegistry2::deregisterValue(const QString &key)
+void ObjectRegistry::deregisterValue(const QString &key)
 {
     qCInfo(self) << "deregister value:" << key;
     const auto value = _registeredValues.take(key);
@@ -109,7 +109,7 @@ void ObjectRegistry2::deregisterValue(const QString &key)
         this->deregisterValue(child->key);
 }
 
-bool ObjectRegistry2::set(const QString &key, const QVariant &value)
+bool ObjectRegistry::set(const QString &key, const QVariant &value)
 {
     qCInfo(self) << "set value:" << key << value;
     auto it = _registeredValues.find(key);
@@ -139,7 +139,7 @@ bool ObjectRegistry2::set(const QString &key, const QVariant &value)
     return true;
 }
 
-QVariant ObjectRegistry2::get(const QString &key)
+QVariant ObjectRegistry::get(const QString &key)
 {
     qCInfo(self) << "get value:" << key;
     auto it = _registeredValues.find(key);
@@ -172,7 +172,7 @@ QVariant ObjectRegistry2::get(const QString &key)
     return registeredValue.value;
 }
 
-QVariant ObjectRegistry2::callMethod(const QMetaMethod &method, QObject *object, const QVariantList &args)
+QVariant ObjectRegistry::callMethod(const QMetaMethod &method, QObject *object, const QVariantList &args)
 {
     qCInfo(self) << "call method:" << method.methodSignature() << args;
     if (method.parameterCount() != args.size()) {
@@ -246,7 +246,7 @@ QVariant ObjectRegistry2::callMethod(const QMetaMethod &method, QObject *object,
     return QVariant{method.returnMetaType(), returnValue.constData()};
 }
 
-QVariant ObjectRegistry2::call(const QString &key, const QVariantList &arguments)
+QVariant ObjectRegistry::call(const QString &key, const QVariantList &arguments)
 {
     qCInfo(self) << "call value:" << key << arguments;
     const auto method = _registeredMethods.constFind(key);

@@ -6,7 +6,7 @@
 #include <QObject>
 #include <QQuickItem>
 
-#include <objectregistry2.h>
+#include <objectregistry.h>
 #include <quicktestrecorder.h>
 #include <websocketserver.h>
 
@@ -226,7 +226,7 @@ private:
 
     QuickTestRecorder _recorder;
 
-    ObjectRegistry2 _registry;
+    ObjectRegistry _registry;
     WebSocketServer _webSocketServer;
 };
 

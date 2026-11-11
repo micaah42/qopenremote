@@ -5,7 +5,7 @@
 #include <QtWebSockets/QWebSocket>
 #include <QtWebSockets/QWebSocketServer>
 
-#include <objectregistry2.h>
+#include <objectregistry.h>
 
 class WebSocketServer : public QObject
 {
@@ -14,7 +14,7 @@ class WebSocketServer : public QObject
     Q_PROPERTY(quint16 port READ port WRITE setPort NOTIFY portChanged FINAL)
 
 public:
-    explicit WebSocketServer(ObjectRegistry2 &registry, QObject *parent = nullptr);
+    explicit WebSocketServer(ObjectRegistry &registry, QObject *parent = nullptr);
 
     QString address() const;
     void setAddress(const QString &address);
@@ -35,7 +35,7 @@ protected:
     void onNewConnection();
 
 private:
-    ObjectRegistry2 &_registry;
+    ObjectRegistry &_registry;
     QWebSocketServer *_server;
     QString _address{"127.0.0.1"};
     quint16 _port = 21120;

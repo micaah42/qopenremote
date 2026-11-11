@@ -29,11 +29,11 @@ signals:
     void changed();
 };
 
-class ObjectRegistry2 : public QObject
+class ObjectRegistry : public QObject
 {
     Q_OBJECT
 public:
-    explicit ObjectRegistry2(QObject *parent = nullptr);
+    explicit ObjectRegistry(QObject *parent = nullptr);
 
 public slots:
 

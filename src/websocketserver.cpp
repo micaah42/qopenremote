@@ -8,7 +8,7 @@ namespace {
 Q_LOGGING_CATEGORY(self, "server", QtWarningMsg)
 }
 
-WebSocketServer::WebSocketServer(ObjectRegistry2 &registry, QObject *parent)
+WebSocketServer::WebSocketServer(ObjectRegistry &registry, QObject *parent)
     : QObject{parent}
     , _registry{registry}
     , _server{new QWebSocketServer{"talking-clock", QWebSocketServer::NonSecureMode, this}}
