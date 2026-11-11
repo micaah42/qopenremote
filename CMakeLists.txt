@@ -47,8 +47,8 @@ add_library(${PROJECT_NAME} SHARED
     src/deletionutils.h
     src/variantutils.cpp
     src/variantutils.h
-    src/objectregistry2.cpp
-    src/objectregistry2.h
+    src/objectregistry.cpp
+    src/objectregistry.h
     src/connectionutils.cpp
     src/connectionutils.h 
 )
