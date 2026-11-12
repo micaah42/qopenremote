@@ -1,6 +1,8 @@
 #ifndef QUICKTESTENGINE_H
 #define QUICKTESTENGINE_H
 
+#include "qopenremote_global.h"
+
 #include <QDebug>
 #include <QFuture>
 #include <QObject>
@@ -51,7 +53,7 @@
 
     \sa PathPart
 */
-class QuickTestEngine : public QObject
+class QOPENREMOTE_EXPORT QuickTestEngine : public QObject
 {
     Q_OBJECT
     QML_ELEMENT

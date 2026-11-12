@@ -1,10 +1,12 @@
 #ifndef LOGRECORD_H
 #define LOGRECORD_H
 
+#include "qopenremote_global.h"
+
 #include <QObject>
 #include <QQmlEngine>
 
-class LogRecord : public QObject
+class QOPENREMOTE_EXPORT LogRecord : public QObject
 {
     Q_OBJECT
     QML_ELEMENT

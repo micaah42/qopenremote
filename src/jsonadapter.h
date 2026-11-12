@@ -1,11 +1,13 @@
 #ifndef JSONADAPTER_H
 #define JSONADAPTER_H
 
+#include "qopenremote_global.h"
+
 #include <QObject>
 
 #include "objectregistry.h"
 
-class JSONAdapter : public QObject
+class QOPENREMOTE_EXPORT JSONAdapter : public QObject
 {
     Q_OBJECT
 public:

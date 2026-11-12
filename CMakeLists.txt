@@ -53,7 +53,10 @@ add_library(${PROJECT_NAME} SHARED
     src/connectionutils.h 
 )
 
-set_target_properties(${PROJECT_NAME} PROPERTIES SOVERSION ${PROJECT_VERSION})
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    SOVERSION ${PROJECT_VERSION}
+    WINDOWS_EXPORT_ALL_SYMBOLS ON
+)
 
 target_include_directories(${PROJECT_NAME} PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/>

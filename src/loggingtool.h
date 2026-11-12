@@ -1,6 +1,8 @@
 #ifndef LOGGINGTOOL_H
 #define LOGGINGTOOL_H
 
+#include "qopenremote_global.h"
+
 #include <QMutex>
 #include <QObject>
 #include <QQmlEngine>
@@ -9,7 +11,7 @@
 
 #include "logrecord.h"
 
-class LogRecordListModel : public ListModel<LogRecord *>
+class QOPENREMOTE_EXPORT LogRecordListModel : public ListModel<LogRecord *>
 {
     Q_OBJECT
     QML_ELEMENT
@@ -17,7 +19,7 @@ public:
     explicit LogRecordListModel(QObject *parent);
 };
 
-class LoggingTool : public QObject
+class QOPENREMOTE_EXPORT LoggingTool : public QObject
 {
     Q_OBJECT
     QML_ELEMENT

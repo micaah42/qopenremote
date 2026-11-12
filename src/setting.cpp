@@ -1,10 +1,16 @@
 #include "setting.h"
 
+#ifdef Q_OS_UNIX
 #include "unistd.h"
+#endif
 
 QmlSettings *init()
 {
+#ifdef Q_OS_UNIX
     auto settings = new QmlSettings{geteuid() == 0 ? QSettings::SystemScope : QSettings::UserScope};
+#else
+    auto settings = new QmlSettings{QSettings::UserScope};
+#endif
     qInfo() << "init settings file:" << settings->fileName();
     return settings;
 }

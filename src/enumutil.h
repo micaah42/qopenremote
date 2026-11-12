@@ -6,7 +6,7 @@
 #include <QMetaEnum>
 #include <QObject>
 
-class EnumUtilBase : public QObject
+class QOPENREMOTE_EXPORT EnumUtilBase : public QObject
 {
     Q_OBJECT
     QML_ELEMENT

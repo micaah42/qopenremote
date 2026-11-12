@@ -1,13 +1,15 @@
 #ifndef CONNECTIONUTILS_H
 #define CONNECTIONUTILS_H
 
+#include "qopenremote_global.h"
+
 #include <QObject>
 #include <QSharedPointer>
 
 namespace ConnectionUtils {
 
 typedef QSharedPointer<QMetaObject::Connection> ConnectionPtr;
-void disconnectAndClear(QList<ConnectionPtr> &_connections);
+QOPENREMOTE_EXPORT void disconnectAndClear(QList<ConnectionPtr> &_connections);
 
 } // namespace ConnectionUtils
 

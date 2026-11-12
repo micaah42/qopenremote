@@ -1,16 +1,18 @@
 #ifndef SORTFILTERPROXYLISTMODEL_H
 #define SORTFILTERPROXYLISTMODEL_H
 
+#include "qopenremote_global.h"
+
 #include <QObject>
 #include <QSortFilterProxyModel>
 #include <QtQmlIntegration/QtQmlIntegration>
 
 #include "listmodel.h"
 
-class SortFilterProxyListModelBase : public QSortFilterProxyModel
+class QOPENREMOTE_EXPORT SortFilterProxyListModelBase : public QSortFilterProxyModel
 {
     Q_OBJECT
-    
+
     Q_PROPERTY(ListModelBase *listModel READ listModel WRITE setListModel NOTIFY listModelChanged FINAL)
 
 public:

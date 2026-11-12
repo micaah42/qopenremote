@@ -1,6 +1,8 @@
 #ifndef LISTMODEL_H
 #define LISTMODEL_H
 
+#include "qopenremote_global.h"
+
 #include <QAbstractListModel>
 #include <QQmlEngine>
 
@@ -24,7 +26,7 @@ const QList<T> qFromVariantList(const QVariantList &variants)
     return list;
 }
 
-class ListModelBase : public QAbstractListModel
+class QOPENREMOTE_EXPORT ListModelBase : public QAbstractListModel
 {
     Q_OBJECT
     QML_ELEMENT

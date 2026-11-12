@@ -1,13 +1,15 @@
 #ifndef WEBSOCKETSERVER_H
 #define WEBSOCKETSERVER_H
 
+#include "qopenremote_global.h"
+
 #include <QObject>
 #include <QtWebSockets/QWebSocket>
 #include <QtWebSockets/QWebSocketServer>
 
 #include <objectregistry.h>
 
-class WebSocketServer : public QObject
+class QOPENREMOTE_EXPORT WebSocketServer : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(QString address READ address WRITE setAddress NOTIFY addressChanged FINAL)
@@ -29,7 +31,7 @@ public slots:
 signals:
     void addressChanged();
     void portChanged();
-    void clientConnected(QWebSocket* client);
+    void clientConnected(QWebSocket *client);
 
 protected:
     void onNewConnection();

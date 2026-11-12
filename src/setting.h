@@ -1,17 +1,22 @@
 #ifndef SETTING_H
 #define SETTING_H
 
+#include "qopenremote_global.h"
+
 #include <QSettings>
 #include <QVariant>
 
-class QmlSetting : public QObject
+class QOPENREMOTE_EXPORT QmlSetting : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(QVariant value READ value WRITE setValue NOTIFY valueChanged FINAL)
     Q_PROPERTY(QString key READ key CONSTANT FINAL)
 
 public:
-    explicit QmlSetting(const QString &key, const QVariant &defaultValue = QVariant(), QObject *parent = nullptr, QSettings *settings = nullptr);
+    explicit QmlSetting(const QString &key,
+                        const QVariant &defaultValue = QVariant(),
+                        QObject *parent = nullptr,
+                        QSettings *settings = nullptr);
 
     void setValue(const QVariant &newValue);
     QVariant value() const;
@@ -26,7 +31,7 @@ private:
     QString _key;
 };
 
-class QmlSettings : public QSettings
+class QOPENREMOTE_EXPORT QmlSettings : public QSettings
 {
     Q_OBJECT
     Q_PROPERTY(QString fileName READ fileName CONSTANT FINAL)
@@ -46,7 +51,7 @@ public slots:
     void setValue(const QString &key, const QVariant &newValue);
 };
 
-QmlSettings &getApplicationSettings();
+QOPENREMOTE_EXPORT QmlSettings &getApplicationSettings();
 
 template<class T>
 class Setting

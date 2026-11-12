@@ -1,10 +1,12 @@
 #ifndef JSON_H
 #define JSON_H
 
+#include "qopenremote_global.h"
+
 #include <QJsonValue>
 #include <QVariant>
 
-class JSON
+class QOPENREMOTE_EXPORT JSON
 {
     using VisitedObjects = QSharedPointer<QSet<QObject *>>;
 

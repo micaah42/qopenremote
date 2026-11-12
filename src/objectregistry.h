@@ -1,12 +1,14 @@
-#ifndef OBJECTREGISTRY2_H
-#define OBJECTREGISTRY2_H
+#ifndef OBJECTREGISTRY_H
+#define OBJECTREGISTRY_H
+
+#include "qopenremote_global.h"
 
 #include <QMetaProperty>
 #include <QObject>
 #include <QPointer>
 #include <QVariant>
 
-class RegisteredValue : public QObject
+class QOPENREMOTE_EXPORT RegisteredValue : public QObject
 {
     Q_OBJECT
 public:
@@ -29,7 +31,7 @@ signals:
     void changed();
 };
 
-class ObjectRegistry : public QObject
+class QOPENREMOTE_EXPORT ObjectRegistry : public QObject
 {
     Q_OBJECT
 public:
@@ -39,9 +41,11 @@ public slots:
 
     RegisteredValue::Ptr registerValue(const QString &key, QObject *object);
 
-    RegisteredValue::Ptr registerValue(
-        const QString &key, const QVariant &value, QObject *owner = nullptr, const QMetaProperty &property = QMetaProperty(), int index = -1
-    );
+    RegisteredValue::Ptr registerValue(const QString &key,
+                                       const QVariant &value,
+                                       QObject *owner = nullptr,
+                                       const QMetaProperty &property = QMetaProperty(),
+                                       int index = -1);
     void deregisterValue(const QString &key);
 
     QVariant call(const QString &key, const QVariantList &arguments);
@@ -58,4 +62,4 @@ private:
     QMap<QString, std::function<QVariant(const QVariantList &)>> _registeredMethods;
 };
 
-#endif // OBJECTREGISTRY2_H
+#endif // OBJECTREGISTRY_H
