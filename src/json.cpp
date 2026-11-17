@@ -121,7 +121,7 @@ QJsonValue JSON::serialize(const QVariant &variant, const VisitedObjects &visite
         qCDebug(self) << "serializing QObject:" << metaObject->className();
 
         if (visitedObjects->contains(variant.value<QObject *>())) {
-            qCCritical(self) << "circular serialization detected:" << variant;
+            qCDebug(self) << "circular serialization detected:" << variant;
             return QJsonValue::Null;
         }
 
