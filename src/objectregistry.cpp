@@ -21,8 +21,19 @@ RegisteredValue::Ptr ObjectRegistry::registerValue(const QString &key, QObject *
 }
 
 RegisteredValue::Ptr ObjectRegistry::registerValue(
-    const QString &key, const QVariant &value, QObject *owner, const QMetaProperty &property, int index
-)
+    const QString &key, const QVariant &value, QObject *owner, const QMetaProperty &property, int index)
+{
+    QSet<QObject *> ancestors;
+    for (auto separator = key.indexOf('.'); separator != -1; separator = key.indexOf('.', separator + 1)) {
+        const auto ancestor = _registeredValues.value(key.left(separator));
+        if (ancestor && ancestor->value.canConvert<QObject *>())
+            ancestors.insert(ancestor->value.value<QObject *>());
+    }
+    return registerValue(key, value, owner, property, index, ancestors);
+}
+
+RegisteredValue::Ptr ObjectRegistry::registerValue(
+    const QString &key, const QVariant &value, QObject *owner, const QMetaProperty &property, int index, QSet<QObject *> &ancestors)
 {
     qCInfo(self) << "register value:" << key << value;
 
@@ -38,9 +49,39 @@ RegisteredValue::Ptr ObjectRegistry::registerValue(
     registeredValue->owner = owner;
     registeredValue->key = key;
     registeredValue->value = value;
+    registeredValue->index = index;
+    _registeredValues.insert(key, registeredValue);
+
+    if (owner && property.hasNotifySignal() && index == -1) {
+        connect(owner, property.notifySignal(), registeredValue.get(), RegisteredValue::notifierSlot);
+        connect(registeredValue.get(), &RegisteredValue::changed, this, [this, registeredValue = registeredValue.get()]() {
+            const auto current = _registeredValues.value(registeredValue->key);
+            if (!current || !current->owner)
+                return;
+            auto newValue = current->property.read(current->owner);
+            emit valueChanged(current->key, newValue);
+            qCDebug(self) << "registered value changed:" << current->key << "=>" << newValue;
+
+            if (_registeredValues.value(current->key) == current
+                && (newValue.canConvert<QObject *>() || newValue.canConvert<QVariantList>())) {
+                const auto key = current->key;
+                const auto parent = _registeredValues.value(key.left(key.lastIndexOf('.')));
+                this->deregisterValue(key);
+                const auto replacement = this->registerValue(key, newValue, current->owner, current->property, current->index);
+                if (parent) {
+                    const auto index = parent->children.indexOf(current);
+                    if (index >= 0)
+                        parent->children[index] = replacement;
+                }
+            }
+        });
+    }
 
     if (value.canConvert<QObject *>() && !value.isNull()) {
         auto object = value.value<QObject *>();
+        if (ancestors.contains(object))
+            return registeredValue;
+        ancestors.insert(object);
         auto metaObject = object->metaObject();
 
         qCDebug(self) << "recurse object:" << key << metaObject->className();
@@ -49,22 +90,8 @@ RegisteredValue::Ptr ObjectRegistry::registerValue(
             auto property = metaObject->property(i);
             auto propertyName = QString{"%1.%2"}.arg(key, property.name());
             auto propertyValue = property.read(object);
-            auto childRegisteredValue = this->registerValue(propertyName, propertyValue, object, property);
+            auto childRegisteredValue = this->registerValue(propertyName, propertyValue, object, property, -1, ancestors);
             registeredValue->children.append(childRegisteredValue);
-
-            if (property.hasNotifySignal()) {
-                connect(object, property.notifySignal(), childRegisteredValue.get(), RegisteredValue::notifierSlot);
-                connect(childRegisteredValue.get(), &RegisteredValue::changed, this, [this, registeredValue = childRegisteredValue.get()]() {
-                    auto newValue = registeredValue->property.read(registeredValue->owner);
-                    emit valueChanged(registeredValue->key, newValue);
-                    qCDebug(self) << "registered value changed:" << registeredValue->key << "=>" << newValue;
-
-                    if (newValue.canConvert<QObject *>() || newValue.canConvert<QVariantList>()) {
-                        this->deregisterValue(registeredValue->key);
-                        this->registerValue(registeredValue->key, newValue, registeredValue->owner, registeredValue->property);
-                    }
-                });
-            }
         }
 
         for (int i = 0; i < metaObject->methodCount(); i++) {
@@ -79,6 +106,7 @@ RegisteredValue::Ptr ObjectRegistry::registerValue(
 
             registeredValue->methodKeys.append(methodName);
         }
+        ancestors.remove(object);
     }
 
     else if (value.canConvert<QVariantList>() && value.typeId() != QMetaType::QString) {
@@ -87,12 +115,11 @@ RegisteredValue::Ptr ObjectRegistry::registerValue(
         for (int i = 0; i < list.size(); i++) {
             auto item = list[i];
             auto itemName = QString{"%1.%2"}.arg(key, QString::number(i));
-            auto childRegisteredValue = this->registerValue(itemName, item, owner, property, i);
+            auto childRegisteredValue = this->registerValue(itemName, item, owner, property, i, ancestors);
             registeredValue->children.append(childRegisteredValue);
         }
     }
 
-    _registeredValues.insert(key, registeredValue);
     qCDebug(self) << "registered value:" << key;
     return registeredValue;
 }
@@ -101,6 +128,8 @@ void ObjectRegistry::deregisterValue(const QString &key)
 {
     qCInfo(self) << "deregister value:" << key;
     const auto value = _registeredValues.take(key);
+    if (!value)
+        return;
 
     for (auto const &key : std::as_const(value->methodKeys))
         _registeredMethods.remove(key);
@@ -212,19 +241,19 @@ QVariant ObjectRegistry::callMethod(const QMetaMethod &method, QObject *object, 
 
     try {
         bool ok = method.invoke( //
-                object,
-                Qt::DirectConnection,
-                gReturn,
-                gArgs.value(0),
-                gArgs.value(1),
-                gArgs.value(2),
-                gArgs.value(3),
-                gArgs.value(4),
-                gArgs.value(5),
-                gArgs.value(6),
-                gArgs.value(7),
-                gArgs.value(8),
-                gArgs.value(9));
+            object,
+            Qt::DirectConnection,
+            gReturn,
+            gArgs.value(0),
+            gArgs.value(1),
+            gArgs.value(2),
+            gArgs.value(3),
+            gArgs.value(4),
+            gArgs.value(5),
+            gArgs.value(6),
+            gArgs.value(7),
+            gArgs.value(8),
+            gArgs.value(9));
 
         if (!ok) {
             qCWarning(self) << "calling" << method.methodSignature() << "failed.";

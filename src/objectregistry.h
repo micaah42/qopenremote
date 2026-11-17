@@ -6,6 +6,7 @@
 #include <QMetaProperty>
 #include <QObject>
 #include <QPointer>
+#include <QSet>
 #include <QVariant>
 
 class QOPENREMOTE_EXPORT RegisteredValue : public QObject
@@ -57,6 +58,8 @@ signals:
     void valueChanged(const QString &key, const QVariant &value);
 
 private:
+    RegisteredValue::Ptr registerValue(
+        const QString &key, const QVariant &value, QObject *owner, const QMetaProperty &property, int index, QSet<QObject *> &ancestors);
     static QVariant callMethod(const QMetaMethod &method, QObject *object, const QVariantList &arguments);
     QMap<QString, RegisteredValue::Ptr> _registeredValues;
     QMap<QString, std::function<QVariant(const QVariantList &)>> _registeredMethods;
